@@ -96,5 +96,5 @@ In this example, the results is plot below:
 
 <img src="/Example/figures/score.jpg" width="400px">
 In this figure, each point represents a domain. The cyan point standing out in the upper-right corner is a domain of Q9DAK2 (Pacrg).  
-Besides, the local z-score of the cyan domain is 9.29, ranking first.
+Besides, the local z-score of the cyan domain is 9.29, ranking first.  
 Thus, DomainSeeker successfully identified the correct domain for the density of protein Pacrg.
