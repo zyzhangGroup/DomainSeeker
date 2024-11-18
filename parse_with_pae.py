@@ -21,9 +21,11 @@ minimum_domain_length=40
 def parse_pae_file(pae_json_file):
     import json
     with open(pae_json_file, 'rt') as f:
-        data = json.load(f)[0]
-    data=np.array(data['predicted_aligned_error'],dtype=float)
-    pae_matrix=data
+        data=json.load(f)
+        if type(data)==list:
+            data=data[0]
+    key=list({'pae','predicted_aligned_error'}&set(data.keys()))[0]
+    pae_matrix=np.array(data[key],dtype=float)
     return pae_matrix
 
 def get_range_list(cluster):
