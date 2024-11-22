@@ -92,7 +92,7 @@ def get_residue_graph(u,pae_matrix,plddt_cutoff,pae_cutoff):
     residue_graph=nx.from_numpy_array(adjacent_matrix)
     residue_graph=nx.relabel_nodes(residue_graph,{i:i+1 for i in range(len(adjacent_matrix))})
     # remove residues with low plddts
-    residue_graph.remove_nodes_from(u.select_atoms(f'bfactor 0:{plddt_cutoff}').residues.resids)
+    residue_graph.remove_nodes_from(u.select_atoms(f'tempfactor 0:{plddt_cutoff}').residues.resids)
     return residue_graph
 
 
