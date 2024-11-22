@@ -100,3 +100,9 @@ In this figure, each point represents a domain. The cyan point standing out in t
 Besides, the local z-score of the cyan domain is 9.29, ranking first.  
 
 Thus, DomainSeeker successfully identified the correct domain for the density of protein Pacrg.
+
+## Citation
+If you use DomainSeeker in your work, please cite the following preprint:
+'''
+Lu, Y., Chen, G., Sun, F., Zhu, Y., & Zhang, Z. (2024). De novo identification of protein domains in cryo-electron tomography maps from AlphaFold2 models. bioRxiv, 2024.2011.2021.623534. https://doi.org/10.1101/2024.11.21.623534 
+'''
