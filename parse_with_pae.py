@@ -26,6 +26,7 @@ def parse_pae_file(pae_json_file):
             data=data[0]
     key=list({'pae','predicted_aligned_error'}&set(data.keys()))[0]
     pae_matrix=np.array(data[key],dtype=float)
+    np.fill_diagonal(pae_matrix,0)
     return pae_matrix
 
 def get_range_list(cluster):
