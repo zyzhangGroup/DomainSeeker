@@ -4,12 +4,17 @@ import networkx as nx
 import MDAnalysis as mda
 import os,sys
 
-pdb_dir=sys.argv[1]
-pae_dir=sys.argv[2]
-output_dir=sys.argv[3]
+argv=sys.argv
+
+pdb_dir=argv[1]
+pae_dir=argv[2]
+output_dir=argv[3]
 
 #parameters
-plddt_cutoff=70 
+if len(argv)==5:
+    plddt_cutoff=argv[4]
+else:
+    plddt_cutoff=70
 pae_cutoff=5
 clique_cutoff=4
 min_dege_ratio_between_cliques=0.6
