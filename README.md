@@ -40,8 +40,9 @@ python ../fetch_pdb_pae.py protein_list.txt .
 ### 3.Domain parsing
 Usage:
 ```
-parse_with_pae.py pdb_dir pae_dir output_dir
+parse_with_pae.py pdb_dir pae_dir output_dir [plddt_cutoff=70]
 ```
+> plddt_cutoff: Optional. The default value is 70.  
 In the "output_dir", the "UniprotID.domains" files record the residue ranges of each domain for each protein. And each domain is named in the format "UniprotID_Dx.pdb", where x starts from 0.  
 
 Example commands:
@@ -75,10 +76,14 @@ score_rank.py domain_dir map_dir fit_out_dir ref_map_threshold ref_map_laplacian
 > ref_map_threshold: Voxel values below "ref_map_threshold" are ignored.  
 > ref_map_laplacian_cutoff_low: After laplacian filtering, voxel values between "ref_map_laplacian_cutoff_low" and 0 are ignore.  
 > ref_map_laplacian_cutoff_high: After laplacian filtering, voxel values  between 0 and "ref_map_laplacian_cutoff_high" are ignore.
+> box_num: The number of bins into which the overlap volume is divided.
+> min_entries_per_box: The minimum data points in each bin.
 
+The "box_num" and "min_entries_per_box" parameters are used to caculate the local z-scores.  
 The "ref_map_laplacian_cutoff_low" parameter is a negative value set to ignore some noise around 0. If the quality of the target density is quite good, you can also set this value to 0.  
 The "ref_map_laplacian_cutoff_high" parameter is a positive value set to reduce the adverse effects at the density boundaries. It is better to set this parameter so that the positive-value surface surrounds the negative-value surface without exceeding it by too much.  
 Pink: negative, yellow: positive.
+
 
 <img src="/Example/figures/density_Pacrg_filtered.jpg" width="400px">
 
@@ -100,6 +105,18 @@ In this figure, each point represents a domain. The cyan point standing out in t
 Besides, the local z-score of the cyan domain is 9.29, ranking first.  
 
 Thus, DomainSeeker successfully identified the correct domain for the density of protein Pacrg.
+
+## Additional Features
+You can use the _"get_fitted_domain.py"_ script to generate the fitted domains from the output of fitting process.  
+Usage:
+```
+get_fitted_domain.py domain_dir fitout_dir domain_list
+```
+> domain_dir: The directory of unfitted domains.
+> fitout_dir: The output directory for the fitting results of a specific density.
+> domain_list: A sequence of domain names, separated by spaces, without the '.pdb' suffix.
+
+It will generate fitted domains named in the format "domainName_fitted.pdb", which will be saved in the "fitout_dir".
 
 ## Citation
 If you use DomainSeeker in your work, please cite the following preprint:
