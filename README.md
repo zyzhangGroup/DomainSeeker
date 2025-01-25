@@ -76,9 +76,9 @@ score_rank.py domain_dir map_dir fit_out_dir ref_map_threshold ref_map_laplacian
 > fit_out_dir: The "output_dir" used for the _"fit_with_chimerax.py"_ script.  
 > ref_map_threshold: Voxel values below "ref_map_threshold" are ignored.  
 > ref_map_laplacian_cutoff_low: After laplacian filtering, voxel values between "ref_map_laplacian_cutoff_low" and 0 are ignore.  
-> ref_map_laplacian_cutoff_high: After laplacian filtering, voxel values  between 0 and "ref_map_laplacian_cutoff_high" are ignore.
-> box_num: The number of bins into which the overlap volume is divided.
-> min_entries_per_box: The minimum data points in each bin.
+> ref_map_laplacian_cutoff_high: After laplacian filtering, voxel values  between 0 and "ref_map_laplacian_cutoff_high" are ignore.  
+> box_num: The number of bins into which the overlap volume is divided.  
+> min_entries_per_box: The minimum data points in each bin.  
 
 The "box_num" and "min_entries_per_box" parameters are used to caculate the local z-scores.  
 
