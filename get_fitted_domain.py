@@ -5,7 +5,7 @@ import sys,os
 argv=sys.argv
 domain_dir=argv[1]
 fitout_dir=argv[2]
-domain_list=argv[3:]    #无后缀
+domain_list=argv[3:]    #without suffix
 
 for domain in domain_list:
     domain_path=os.path.join(domain_dir,domain+'.pdb')
