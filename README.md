@@ -43,6 +43,7 @@ Usage:
 parse_with_pae.py pdb_dir pae_dir output_dir [plddt_cutoff=70]
 ```
 > plddt_cutoff: Optional. The default value is 70.  
+
 In the "output_dir", the "UniprotID.domains" files record the residue ranges of each domain for each protein. And each domain is named in the format "UniprotID_Dx.pdb", where x starts from 0.  
 
 Example commands:
@@ -80,8 +81,11 @@ score_rank.py domain_dir map_dir fit_out_dir ref_map_threshold ref_map_laplacian
 > min_entries_per_box: The minimum data points in each bin.
 
 The "box_num" and "min_entries_per_box" parameters are used to caculate the local z-scores.  
+
 The "ref_map_laplacian_cutoff_low" parameter is a negative value set to ignore some noise around 0. If the quality of the target density is quite good, you can also set this value to 0.  
+
 The "ref_map_laplacian_cutoff_high" parameter is a positive value set to reduce the adverse effects at the density boundaries. It is better to set this parameter so that the positive-value surface surrounds the negative-value surface without exceeding it by too much.  
+
 Pink: negative, yellow: positive.
 
 
@@ -112,9 +116,9 @@ Usage:
 ```
 get_fitted_domain.py domain_dir fitout_dir domain_list
 ```
-> domain_dir: The directory of unfitted domains.
-> fitout_dir: The output directory for the fitting results of a specific density.
-> domain_list: A sequence of domain names, separated by spaces, without the '.pdb' suffix.
+> domain_dir: The directory of unfitted domains.  
+> fitout_dir: The output directory for the fitting results of a specific density.  
+> domain_list: A sequence of domain names, separated by spaces, without the '.pdb' suffix.  
 
 It will generate fitted domains named in the format "domainName_fitted.pdb", which will be saved in the "fitout_dir".
 
