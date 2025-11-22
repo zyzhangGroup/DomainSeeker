@@ -68,7 +68,7 @@ After obtaining the PDB and PAE files, click the "Parse Domains" button to perfo
 > **min_domain_size**: Domains containing fewer than this number of residues are filtered out.  
 > **n_process**: Number of parallel processes to use.  
 
-For the AF2 prediction model, it is not recommended to modify any parameters other than *n_process*. For the AF3 model,  setting  *plddt_cutoff* = 50 may result in a better performance.
+For the AF3 model, setting  *plddt_cutoff* = 50 may result in a better performance.
 
 The output files will be saved in the folder specified by the "Domain Directory" option in the "Global Options" module.Two types of output files are generated:
 
