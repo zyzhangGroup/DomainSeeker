@@ -1,26 +1,33 @@
+# 全局异常处理
+import domainseeker_errorLog
+#----------------------------------------------------------------------------------------------------
+
 import numpy as np
-import csv
 import networkx as nx
 import MDAnalysis as mda
 import os,sys
+import multiprocessing
 
-argv=sys.argv
-
-pdb_dir=argv[1]
-pae_dir=argv[2]
-output_dir=argv[3]
+pdb_dir=sys.argv[2]
+pae_dir=sys.argv[3]
+output_dir=sys.argv[4]
+n_processors=int(sys.argv[5])
 
 #parameters
-if len(argv)==5:
-    plddt_cutoff=argv[4]
+if len(sys.argv)>6:
+    plddt_cutoff=float(sys.argv[6])
+    pae_cutoff=float(sys.argv[7])
+    clique_cutoff=int(sys.argv[8])
+    min_dege_ratio_between_cliques=float(sys.argv[9])
+    min_common_nodes_ratio_between_cliques=float(sys.argv[10])
+    minimum_domain_length=int(sys.argv[11])
 else:
-    plddt_cutoff=70
-pae_cutoff=5
-clique_cutoff=4
-min_dege_ratio_between_cliques=0.6
-min_common_nodes_ratio_between_cliques=0.5
-minimum_domain_length=40
-
+    plddt_cutoff=70 
+    pae_cutoff=5
+    clique_cutoff=4
+    min_dege_ratio_between_cliques=0.6
+    min_common_nodes_ratio_between_cliques=0.5
+    minimum_domain_length=40
 
 
 def parse_pae_file(pae_json_file):
@@ -170,24 +177,27 @@ def save_pdbs(u,clusters,uniprot_id,output_dir):
     print(f"{len(clusters)} domains")
     return 0
 
+def run(pdb_file_name):
+    uniprot_id=pdb_file_name[:-4]
+    print(uniprot_id,end=' ')
+    pae_path=os.path.join(pae_dir,f"{uniprot_id}.json")
+    if os.path.exists(pae_path):
+        # get the model
+        pdb_path=os.path.join(pdb_dir,f"{uniprot_id}.pdb")
+        u=mda.Universe(pdb_path)
+        # get pae matrix
+        pae_matrix=parse_pae_file(pae_path)
+        # clustering
+        clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_common_nodes_ratio_between_cliques,minimum_domain_length,minimum_domain_length)
+        # save pdbs
+        save_pdbs(u,clusters,uniprot_id,output_dir)
 
-os.makedirs(output_dir,exist_ok=True)
-file_list=os.listdir(pdb_dir)
-for file_name in file_list:
-    if file_name.endswith(".pdb"):
-        uniprot_id=file_name[:-4]
-        print(uniprot_id,end=' ')
-        pae_path=os.path.join(pae_dir,f"{uniprot_id}.json")
-        if os.path.exists(pae_path):
-            # get the model
-            pdb_path=os.path.join(pdb_dir,f"{uniprot_id}.pdb")
-            u=mda.Universe(pdb_path)
-            # get pae matrix
-            pae_matrix=parse_pae_file(pae_path)
-            # clustering
-            clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_common_nodes_ratio_between_cliques,minimum_domain_length,minimum_domain_length)
-            # save pdbs
-            save_pdbs(u,clusters,uniprot_id,output_dir)
-        else:
-            print("No pae file.")
 
+# run in parallel
+if __name__ == '__main__':
+    os.makedirs(output_dir,exist_ok=True)
+    file_list=[file_name for file_name in os.listdir(pdb_dir) if file_name.endswith(".pdb")]
+
+    pool = multiprocessing.Pool(processes=n_processors)
+    pool.map(run, file_list)
+    pool.close()

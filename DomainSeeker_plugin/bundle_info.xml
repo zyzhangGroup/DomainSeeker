@@ -1,0 +1,54 @@
+<!--
+ChimeraX bundle names must start with "ChimeraX-"
+to avoid clashes with package names in pypi.python.org.
+When uploaded to the ChimeraX toolshed, the bundle
+will be displayed without the ChimeraX- prefix.
+-->
+
+<BundleInfo name="ChimeraX-DomainSeeker" version="1.0.0" package="chimerax.domainseeker" minSessionVersion="1" maxSessionVersion="1">
+
+    <!-- Additional information about bundle source -->
+    <Author>zyzhangGroup USTC</Author>
+    <Email>zzyzhang@ustc.edu.cn</Email>
+    <URL>https://github.com/zyzhangGroup/DomainSeeker</URL>
+
+    <!-- Synopsis is a one-line description
+       Description is a full multi-line description -->
+    <Synopsis>Identify protein domains of a Cryo-EM map.</Synopsis>
+    <Description>
+        Integrate data from Cryo-EM and other experimental techniques (e.g. XL-MS)
+        to identify protein domains in a Cryo-EM density map. 
+    </Description>
+
+    <!-- Categories is a list where this bundle should appear -->
+    <Categories>
+        <Category name="Structure Analysis"/>
+    </Categories>
+
+    <!-- Dependencies on other ChimeraX/Python packages -->
+    <!-- This example uses functionality from the Tutorial_Command bundle -->
+    <Dependencies>
+        <Dependency name="ChimeraX-Core" version=">=1.6"/>
+        <Dependency name="ChimeraX-UI" version=">=1.6"/>
+        <Dependency name="mdanalysis"/>
+        <Dependency name="networkx"/>
+        <Dependency name="wget"/>
+
+    </Dependencies>
+
+    <!-- Non-Python files that are part of package -->
+    <!-- <DataFiles>
+        <DataFile>docs/user/tools/tutorial.html</DataFile>
+    </DataFiles> -->
+
+    <Classifiers>
+        <!-- Development Status should be compatible with bundle version number -->
+        <PythonClassifier>Development Status :: 3 - Alpha</PythonClassifier>
+        <PythonClassifier>License :: Freeware</PythonClassifier>
+        <!-- ChimeraX classifiers describe supplied functionality -->
+        <!-- Register a graphical interface tool -->
+        <ChimeraXClassifier>ChimeraX :: Tool :: DomainSeeker :: Structure Analysis :: 
+            Identify protein domains of a Cryo-EM map</ChimeraXClassifier>
+    </Classifiers>
+
+</BundleInfo>
