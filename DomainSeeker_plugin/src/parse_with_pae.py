@@ -188,7 +188,7 @@ def run(pdb_file_name):
         # get pae matrix
         pae_matrix=parse_pae_file(pae_path)
         # clustering
-        clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_common_nodes_ratio_between_cliques,minimum_domain_length,minimum_domain_length)
+        clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques,minimum_domain_length)
         # save pdbs
         save_pdbs(u,clusters,uniprot_id,output_dir)
 

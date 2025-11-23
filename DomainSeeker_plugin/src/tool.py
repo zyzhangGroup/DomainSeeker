@@ -705,8 +705,13 @@ class DomainSeeker(ToolInstance):
         pae_directory = pae_directory.replace("\\", "/")
         # 运行子进程
         self.session.logger.info("start fetching pdb and pae files")
-        cmd=f'python {script_dir}/fetch_pdb_pae.py {self.error_log_path} {protein_list_file_path} {project_directory} {pdb_directory} {pae_directory}'
-        proc = run_detatched_subprocess(cmd)
+        arg_list=[f'{script_dir}/fetch_pdb_pae.py',
+                  self.error_log_path,
+                  protein_list_file_path,
+                  project_directory,
+                  pdb_directory,
+                  pae_directory]
+        self.run_detatched_subprocess(arg_list)
 
     def _initialize_results(self, target_layout, map_directory, project_directory, domain_directory = "", fitout_dir = ""):
         # 生成空白结果框架
@@ -1205,8 +1210,19 @@ class DomainSeeker(ToolInstance):
         self.session.logger.info(f"Minimum domain length: {minimum_domain_length}")
         self.session.logger.info(f"Number of process: {n_process}")
         # 启动进程
-        cmd=f'python {script_dir}/parse_with_pae.py {self.error_log_path} {pdb_dir} {pae_dir} {output_dir} {n_process} {plddt_cutoff} {pae_cutoff} {clique_cutoff} {min_dege_ratio_between_cliques} {min_common_nodes_ratio_between_cliques} {minimum_domain_length}'
-        run_detatched_subprocess(cmd)
+        arg_list = [f'{script_dir}/parse_with_pae.py',
+                    self.error_log_path,
+                    pdb_dir,
+                    pae_dir,
+                    output_dir,
+                    n_process,
+                    plddt_cutoff,
+                    pae_cutoff,
+                    clique_cutoff,
+                    min_dege_ratio_between_cliques,
+                    min_common_nodes_ratio_between_cliques,
+                    minimum_domain_length]
+        self.run_detatched_subprocess(arg_list)
 
     def _fit_and_score(self, project_directory, densities_dir, threshold, resolution, n_search, negtive_laplacian_cutoff, positive_laplacian_cutoff , n_process, domains_dir = "", fitout_dir = ""):
         # Check if the project directory is valid, if not, raise an error
@@ -1247,8 +1263,22 @@ class DomainSeeker(ToolInstance):
         print()
         print() 
         # 启动进程
-        cmd=f"python {script_dir}/fit_with_chimerax.py {self.error_log_path} {domains_dir} {densities_dir}  {fitout_dir} {threshold} {resolution} {n_search} {negtive_laplacian_cutoff} {positive_laplacian_cutoff} {n_process}"
-        run_detatched_subprocess(cmd)
+        arg_list=[f"{script_dir}/fit_with_chimerax.py",
+                  self.error_log_path,
+                  domains_dir,
+                  densities_dir,
+                  fitout_dir,
+                  threshold,
+                  resolution,
+                  n_search,
+                  negtive_laplacian_cutoff,
+                  positive_laplacian_cutoff,
+                  n_process]
+        if sys.platform == 'win32':
+            wait = False
+        else:
+            wait = True  # Linux: 需要设置wait = True，暂不确定什么原因
+        self.run_detatched_subprocess(arg_list,wait=wait)
     
     def _calculate_prior_probability(self, project_directory, map_dir, fitout_dir, box_num, min_data_per_box, relative_density_cutoff, z_score_offset):
         # Check if the project directory is valid, if not, raise an error
@@ -1267,8 +1297,15 @@ class DomainSeeker(ToolInstance):
             return
         # run calculate_prior_probability.py
         self.session.logger.info("Start calculating prior probabilities")
-        cmd=f"python {script_dir}/calculate_prior_probabilities.py {self.error_log_path} {map_dir}  {fitout_dir} {box_num} {min_data_per_box} {relative_density_cutoff} {z_score_offset}"
-        run_detatched_subprocess(cmd)
+        arg_list = [f"{script_dir}/calculate_prior_probabilities.py",
+                    self.error_log_path,
+                    map_dir,
+                    fitout_dir,
+                    box_num,
+                    min_data_per_box,
+                    relative_density_cutoff,
+                    z_score_offset]
+        self.run_detatched_subprocess(arg_list)
 
     # 计算后验概率
     def _calculate_posterior_probability(self, project_directory,origin_domain_dir,map_dir,map_level,fitout_dir,acceptor_prior_probability_cutoff,donor_prior_probability_cutoff,evidence_strenth,crosslink_files):
@@ -1301,27 +1338,68 @@ class DomainSeeker(ToolInstance):
                 return
         # run calculate_posterior_probability.py
         self.session.logger.info("Start calculating posterior probabilities")
-        cmd=f"python {script_dir}/calculate_posterior_probabilities.py {self.error_log_path} {project_directory} {origin_domain_dir} {map_dir} {map_level} {fitout_dir} {acceptor_prior_probability_cutoff} {donor_prior_probability_cutoff} {evidence_strenth} {' '.join(crosslink_files)}"
-        run_detatched_subprocess(cmd)
+        arg_list = [f"{script_dir}/calculate_posterior_probabilities.py",
+                    self.error_log_path,
+                    project_directory,
+                    origin_domain_dir,
+                    map_dir,
+                    map_level,
+                    fitout_dir,
+                    acceptor_prior_probability_cutoff,
+                    donor_prior_probability_cutoff,
+                    evidence_strenth]
+        arg_list+=crosslink_files
+        self.run_detatched_subprocess(arg_list)
 
 
-def run_detatched_subprocess(command):
-    """启动一个跨平台的后台进程"""
-    kwargs = {
-        'shell': True   # 目前tqdm的调用方式需要使用Shell
-    }
-    
-    if sys.platform == 'win32':
-        kwargs['creationflags'] = subprocess.DETACHED_PROCESS
-    else:
-        kwargs['start_new_session'] = True  # Linux/macOS: 分离进程组
+    def run_detatched_subprocess(self, arg_list, wait=False):
+        """启动一个跨平台的后台进程"""
+        kwargs = {
+            'shell': True   # 目前tqdm的调用方式需要使用Shell
+        }
 
-    # 修改PYTHONPATH环境变量
-    env = os.environ.copy()
-    env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        # get dir of executable chimerax
+        chimerax_dir = os.path.dirname(os.path.realpath(sys.executable))
 
-    # 将当前解释器路径添加到PATH环境变量首位，确保使用当前解释器执行命令
-    env['PATH'] = os.pathsep.join([os.path.dirname(sys.executable)] + env['PATH'].split(os.pathsep))
+        # get current environment
+        env = os.environ.copy()
 
-    # 异步执行
-    return subprocess.Popen(command, **kwargs, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # add chimerax dir to PATH
+        env['PATH'] = os.pathsep.join([env['PATH'], chimerax_dir])
+
+        # 修改PYTHONPATH环境变量
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+
+        # set executable python
+        python_exe = [file_name for file_name in os.listdir(chimerax_dir) if file_name.startswith('python')][0]
+        python_exe = os.path.join(chimerax_dir, python_exe)
+        # python_exe = "python"
+
+        # wait=True    # 调试时，等待进程结束，方便查看输出
+
+        # 异步执行
+        if not wait:
+            if sys.platform == 'win32':
+                kwargs['creationflags'] = subprocess.DETACHED_PROCESS   # 本来在GUI子系统下，设置shell=True时，应该不经过终端，直接启动shell。但这个参数设置后，会强制用终端启动，且会断开和主进程的管道。
+            else:
+                kwargs['start_new_session'] = True  # Linux: 分离进程组
+            # 用列表传递python_exe和参数，避免路径中有空格出错
+            proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
+        if wait:    # 后续考虑用其他方式输出报错信息，弹窗或输出到log
+            if sys.platform == 'win32':
+                pass
+            else:
+                kwargs['start_new_session'] = True  # Linux: 分离进程组
+            kwargs['stdin'] = subprocess.PIPE
+            kwargs['stdout'] = subprocess.PIPE
+            kwargs['stderr'] = subprocess.PIPE
+            # proc = subprocess.Popen(cmd, **kwargs, env=env)
+            proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
+            # 获取输出
+            stdout, stderr = proc.communicate()
+            # 打印输出
+            self.session.logger.info("Stdout:")
+            self.session.logger.info(stdout.decode())
+            self.session.logger.info("Stderr:")
+            self.session.logger.info(stderr.decode())
+            self.session.logger.info("Done.")

@@ -206,7 +206,7 @@ if __name__=="__main__":
         scores=pool.map(score,pool_params)
         pool.close()
 
-        config_path=os.path.join(fitout_dir,ref_map_filename,"score_rank_config.txt")
+        config_path=os.path.join(fitout_dir,ref_map_filename,"overlap_score_config.txt")
         f=open(config_path,'w')
         f.write(f"{domain_dir=}\n"
                +f"{ref_map_path=}\n"
@@ -222,5 +222,7 @@ if __name__=="__main__":
 
         scores_dict={log[:-4]:score_list for log,score_list in zip(log_list,scores)}
 
-        scores_path=os.path.join(fitout_dir,ref_map_filename,"scores.npy")
+        scores_path=os.path.join(fitout_dir,ref_map_filename,"overlap_scores.npy")
         np.save(scores_path,scores_dict,allow_pickle=True)
+
+

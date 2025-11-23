@@ -73,7 +73,7 @@ def save_relative_grids_density_plot(grids,number_of_data, density_filename):
     plt.figure(figsize=(10,10))
     plt.matshow(relative_densitys.T[::-1], cmap=cmap)
     plt.colorbar()
-    save_path=os.path.join(fitout_dir, density_filename, "relative_density_of_local_assessing_plot.png")
+    save_path=os.path.join(fitout_dir, density_filename, "local_assessing_relative_density.png")
     plt.savefig(save_path)
 
 def merge_grids_to_box(grids):
@@ -141,7 +141,7 @@ def get_zScores(scores, density_filename):
     plt.scatter(data[:,0],data[:,1],s=0.5)
     plt.plot(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,0],c='black')
     plt.plot(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,0]+2*ave_std_list[:,1],c='black',linestyle='--')
-    plot_save_path=os.path.join(fitout_dir, density_filename, "local_assessing_plot.png")
+    plot_save_path=os.path.join(fitout_dir, density_filename, "local_assessing.png")
     plt.savefig(plot_save_path)
     # calculate z-scores
     zScores=[]
@@ -203,6 +203,16 @@ for density_filename in density_filenames:
     fitlog_subdir = os.path.join(fitout_subdir, "fitlogs")
 
     # 计算fitting_probability
+    # 记录参数
+    prior_config_path=os.path.join(fitout_subdir,"prior_config.txt")
+    with open(prior_config_path,"w") as f:
+        f.write("Parameter for calculating z-scores:\n")
+        f.write(f"box_num={box_num}\n")
+        f.write(f"min_entries_per_box={min_entries_per_box}\n")
+        f.write(f"relative_density_cutoff={relative_density_cutoff}\n")
+        f.write("\n")
+        f.write("Parameter for calculating prior probabilities:\n")
+        f.write(f"z_score_offset={z_score_offset}\n")
     print(f"Calculating fitting probabilities")
     fitting_probabilities_path=os.path.join(fitout_subdir,"fitting_probabilities.npy")
     fitting_probabilities={}
@@ -218,7 +228,7 @@ for density_filename in density_filenames:
     # 计算z-scores
     print(f"Calculating z-scores")
     # 读取scores
-    scores_path = os.path.join(fitout_subdir, "scores.npy")
+    scores_path = os.path.join(fitout_subdir, "overlap_scores.npy")
     if os.path.exists(scores_path):
         data=np.load(scores_path,allow_pickle=True).item()
         scores=[]

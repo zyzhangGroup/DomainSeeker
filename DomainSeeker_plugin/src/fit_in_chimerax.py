@@ -20,14 +20,16 @@ for fit in fits:
     transform_string_list=[]
     for element in fit.model_transforms()[0][1].matrix.reshape(-1):
         transform_string_list.append(f"{element:10.5f}")
-    log_data.append([f"{fit.correlation():8.5f}",f"{fit.hits():8d}"]+transform_string_list)
+    if fit.correlation() >= 0.00001:
+        log_data.append([f"{fit.correlation():8.5f}",f"{fit.hits():8d}"]+transform_string_list)
 
 # write transformation info into log
-os.makedirs(output_subdir,exist_ok=True)
-fitlog_subdir=os.path.join(output_subdir,"fitlogs")
-os.makedirs(fitlog_subdir,exist_ok=True)
-log_path=os.path.join(fitlog_subdir,os.path.basename(domain_path).replace('pdb','log'))
-print(f"{output_subdir=}")
-print(f"{log_path=}")
-np.savetxt(log_path,log_data,fmt="%s")
+if len(log_data) >=1:
+    os.makedirs(output_subdir,exist_ok=True)
+    fitlog_subdir=os.path.join(output_subdir,"fitlogs")
+    os.makedirs(fitlog_subdir,exist_ok=True)
+    log_path=os.path.join(fitlog_subdir,os.path.basename(domain_path).replace('pdb','log'))
+    print(f"{output_subdir=}")
+    print(f"{log_path=}")
+    np.savetxt(log_path,log_data,fmt="%s")
 

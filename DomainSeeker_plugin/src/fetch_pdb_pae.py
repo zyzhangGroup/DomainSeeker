@@ -25,7 +25,7 @@ os.makedirs(output_pae_dir,exist_ok=True)
 missing_paes=[]
 
 
-UniprotID_list=np.loadtxt(UniprotID_list_path,dtype=str)
+UniprotID_list=np.loadtxt(UniprotID_list_path,dtype=str,ndmin=1)
 n=len(UniprotID_list)
 print(f"Total number of UniprotIDs: {n}")
 print("Downloading PDB and PAE files...")
@@ -33,7 +33,7 @@ for i in tqdm(range(n)):
     ID=UniprotID_list[i]
     pdb_path=os.path.join(output_pdb_dir,ID+'.pdb')
     if not os.path.exists(pdb_path):
-        pdb_url=f"https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-model_v4.pdb"
+        pdb_url=f"https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-model_v6.pdb"
         try:
             wget.download(pdb_url,pdb_path,bar='')
         except Exception as e:
@@ -41,7 +41,7 @@ for i in tqdm(range(n)):
 
     pae_path=os.path.join(output_pae_dir,ID+'.json')
     if not os.path.exists(pae_path):
-        pae_url=f"https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-predicted_aligned_error_v4.json"
+        pae_url=f"https://alphafold.ebi.ac.uk/files/AF-{ID}-F1-predicted_aligned_error_v6.json"
         try:
             wget.download(pae_url,pae_path,bar='')
         except Exception as e:

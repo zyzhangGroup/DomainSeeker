@@ -1,5 +1,5 @@
 # 全局异常处理
-import domainseeker_errorLog
+# import domainseeker_errorLog
 #----------------------------------------------------------------------------------------------------
 
 import numpy as np
@@ -14,6 +14,7 @@ from tqdm import tqdm
 import mrcfile
 from scipy.spatial.distance import cdist
 
+
 project_dir=sys.argv[2]
 origin_domain_dir=sys.argv[3]
 map_dir=sys.argv[4]
@@ -22,10 +23,9 @@ fitout_dir=sys.argv[6]
 
 acceptor_prior_probability_cutoff=float(sys.argv[7])
 donor_prior_probability_cutoff=float(sys.argv[8])
-evidence_strenth=float(sys.argv[9])
+evidence_strength=float(sys.argv[9])
 
 crosslink_files = sys.argv[10:]
-
 
 
 def read_prior_probabilities(file_path):
@@ -144,7 +144,7 @@ def get_cg_data(data, lengths, grid_shape, voxel, map_level=0, cg_voxel=10):
             for k in range(grid_shape[2]):
                 if data[i,j,k]>0:
                     cg_index=(((0.5+np.array([i,j,k]))*voxel)/cg_voxel).astype(int)
-                    data_cg[*cg_index]+=1
+                    data_cg[cg_index[0],cg_index[1],cg_index[2]]+=1
     return data_cg, cg_voxel
 
 def is_adjacent(mrc_path1, mrc_path2, map_level_1, map_level_2,cg_voxel=10,min_ratio=0.1, max_dist=60):
@@ -199,8 +199,8 @@ def lognormal_pdf(d,mu,sigma):
     max=np.exp((sigma**2)/2-mu)/(np.sqrt(2*np.pi)*sigma)
     return 1/(max*d*sigma*np.sqrt(2*np.pi))*np.exp(-0.5*((np.log(d)-mu)/sigma)**2)
 
-def get_multiplier(distance,mu,sigma,evidence_strenth):
-    return evidence_strenth*lognormal_pdf(distance,mu,sigma)
+def get_multiplier(distance,mu,sigma,evidence_strength):
+    return evidence_strength*lognormal_pdf(distance,mu,sigma)
 
 
 
@@ -295,7 +295,7 @@ for Density_1,Density_2 in Density_adj_graph.edges:
                 crosslink_compliant_Density_states_graph[node_1][node_2]["data_list"].append({"crosslink":frozenset({cl_1,cl_2}),
                                                                                             "crosslinked_residues":{node_1:cl_1,node_2:cl_2},
                                                                                             "distance":np.sqrt(distace_matrix[i,j]),
-                                                                                            "multiplier":get_multiplier(np.sqrt(distace_matrix[i,j]),mu,sigma,evidence_strenth)})
+                                                                                            "multiplier":get_multiplier(np.sqrt(distace_matrix[i,j]),mu,sigma,evidence_strength)})
 
 # set转化为list
 crosslink_compliant_states_of_densities=[list(item) for item in crosslink_compliant_states_of_densities]
@@ -738,6 +738,20 @@ def save_posterior_results_of_density(save_path,density_id,sorted_posterior_stat
     np.savetxt(save_path,save_data,fmt='%s')
 
 
+
+# 保存参数：map_dir，fitout_dir，original_domain_dir，crosslink_files，threshold，acceptor_cutoff，donor_cutoff，evidence_strength
+posterior_config_path=os.path.join(project_dir,"posterior_config.txt")
+with open(posterior_config_path,"w") as f:
+    f.write(f"map_dir={map_dir}\n")
+    f.write(f"fitout_dir={fitout_dir}\n")
+    f.write(f"original_domain_dir={origin_domain_dir}\n")
+    f.write(f"crosslink_files:\n")
+    for crosslink_file in crosslink_files:
+        f.write(f"\t{crosslink_file}\n")
+    f.write(f"threshold={map_level}\n")
+    f.write(f"acceptor_cutoff={acceptor_prior_probability_cutoff}\n")
+    f.write(f"donor_cutoff={donor_prior_probability_cutoff}\n")
+    f.write(f"evidence_strength={evidence_strength}\n")
 
 
 # 调整概率
