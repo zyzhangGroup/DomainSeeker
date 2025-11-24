@@ -168,8 +168,8 @@ The results show that after integrating the XL-MS data, the correct proteins are
 ## Debug    
 If there is no response after clicking the calculation button, please check the following:    
 1. The program may be running in the background. Check the project folder to confirm whether the process is active.    
-2. If there are no changes in the project folder, check the error.logfile for any error messages.    
-3. If no errors are recorded in error.log, verify the path to the ChimeraX executable and ensure that there are no spaces in any of the project paths. If spaces are present, remove them (note that you may need to adjust related settings, such as environment variables, after removing spaces) and try again.    
+2. If there are no changes in the project folder, check the *error.log* file for any error messages.    
+3. If no errors are recorded in *error.log*, verify the path to the ChimeraX executable and ensure that there are no spaces in any of the project paths. If spaces are present, remove them (note that you may need to adjust related settings, such as environment variables, after removing spaces) and try again.    
 4. If the issue persists after the above steps, please report it on GitHub.  
 
 
