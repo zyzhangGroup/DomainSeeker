@@ -1381,20 +1381,28 @@ class DomainSeeker(ToolInstance):
         if not wait:
             if sys.platform == 'win32':
                 kwargs['creationflags'] = subprocess.DETACHED_PROCESS   # 本来在GUI子系统下，设置shell=True时，应该不经过终端，直接启动shell。但这个参数设置后，会强制用终端启动，且会断开和主进程的管道。
+                proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env) # 用列表传递python_exe和参数，避免路径中有空格出错
             else:
                 kwargs['start_new_session'] = True  # Linux: 分离进程组
-            # 用列表传递python_exe和参数，避免路径中有空格出错
-            proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
+                # linux系统下，shell=True时，如果传递命令列表，会无参数启动第一个命令
+                # 因此，linux系统下，指定shell=True时，传递命令字符串
+                cmd = " ".join([python_exe] + arg_list)
+                proc = subprocess.Popen(cmd, **kwargs, env=env)
+            
+            
         if wait:    # 后续考虑用其他方式输出报错信息，弹窗或输出到log
-            if sys.platform == 'win32':
-                pass
-            else:
-                kwargs['start_new_session'] = True  # Linux: 分离进程组
+            # PIPE
             kwargs['stdin'] = subprocess.PIPE
             kwargs['stdout'] = subprocess.PIPE
             kwargs['stderr'] = subprocess.PIPE
-            # proc = subprocess.Popen(cmd, **kwargs, env=env)
-            proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
+
+            if sys.platform == 'win32':
+                proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
+            else:
+                kwargs['start_new_session'] = True  # Linux: 分离进程组
+                cmd = " ".join([python_exe] + arg_list)
+                proc = subprocess.Popen(cmd, **kwargs, env=env)
+            
             # 获取输出
             stdout, stderr = proc.communicate()
             # 打印输出
