@@ -7,6 +7,8 @@ import networkx as nx
 import MDAnalysis as mda
 import os,sys
 import multiprocessing
+from tqdm import tqdm
+import warnings
 
 pdb_dir=sys.argv[2]
 pae_dir=sys.argv[3]
@@ -170,21 +172,25 @@ def save_pdbs(u,clusters,uniprot_id,output_dir):
             cluster=clusters[i]
             sel=u.residues[np.array(cluster)-1]
             output_domain=os.path.join(output_dir,f"{uniprot_id}_D{i}.pdb")
-            sel.atoms.write(output_domain)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                # 抑制写入pdb时的冗余警告
+                sel.atoms.write(output_domain)
             select_string=get_select_string(cluster)
             info_file.write(f"D{i}\t{select_string}\n")
         info_file.close()
-    print(f"{len(clusters)} domains")
     return 0
 
 def run(pdb_file_name):
     uniprot_id=pdb_file_name[:-4]
-    print(uniprot_id,end=' ')
     pae_path=os.path.join(pae_dir,f"{uniprot_id}.json")
     if os.path.exists(pae_path):
         # get the model
         pdb_path=os.path.join(pdb_dir,f"{uniprot_id}.pdb")
-        u=mda.Universe(pdb_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            # 抑制读取pdb时的冗余警告
+            u=mda.Universe(pdb_path)
         # get pae matrix
         pae_matrix=parse_pae_file(pae_path)
         # clustering
@@ -198,6 +204,10 @@ if __name__ == '__main__':
     os.makedirs(output_dir,exist_ok=True)
     file_list=[file_name for file_name in os.listdir(pdb_dir) if file_name.endswith(".pdb")]
 
-    pool = multiprocessing.Pool(processes=n_processors)
-    pool.map(run, file_list)
-    pool.close()
+    with multiprocessing.Pool(n_processors) as pool:
+        # 强制迭代tqdm对象，更新进度条
+        for result in tqdm(pool.imap_unordered(run, file_list),total=len(file_list),desc="Parsing",file=sys.stdout):
+            # 处理结果
+            pass
+    
+    print("Done domain parsing.")

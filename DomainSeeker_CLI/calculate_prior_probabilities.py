@@ -188,13 +188,9 @@ def get_prior_probabilities(fitting_probabilities, zScores, offset):
     return prior_probabilities
 
 
-
-
 density_filenames = os.listdir(map_dir)
 
-
-for density_filename in density_filenames:
-    print(f"Processing {density_filename}")
+for i, density_filename in enumerate(density_filenames):
     fitout_subdir = os.path.join(fitout_dir, density_filename)
     fitlog_subdir = os.path.join(fitout_subdir, "fitlogs")
 
@@ -209,9 +205,10 @@ for density_filename in density_filenames:
         f.write("\n")
         f.write("Parameter for calculating prior probabilities:\n")
         f.write(f"z_score_offset={z_score_offset}\n")
-    print(f"Calculating fitting probabilities")
+
     fitting_probabilities_path=os.path.join(fitout_subdir,"fitting_probabilities.npy")
     fitting_probabilities={}
+    print(f"{i+1}/{len(density_filenames)}--Calculating fitting probabilities for {density_filename}...")
     for file_name in os.listdir(fitlog_subdir):
         if file_name.endswith(".log"):
             fit_log_path=os.path.join(fitlog_subdir,file_name)
@@ -222,7 +219,7 @@ for density_filename in density_filenames:
 
     
     # 计算z-scores
-    print(f"Calculating z-scores")
+    print(f"{i+1}/{len(density_filenames)}--Calculating z-scores for {density_filename}...")
     # 读取scores
     scores_path = os.path.join(fitout_subdir, "overlap_scores.npy")
     if os.path.exists(scores_path):
@@ -236,13 +233,15 @@ for density_filename in density_filenames:
         # 计算z-scores
         zScores=get_zScores(scores, density_filename)
     else:
-        print(f"No scores found for {density_filename}")
+        print(f"No scores found for {density_filename}",file=sys.stderr)
 
     # 计算prior_probabilities
-    print(f"Calculating prior probabilities")
+    print(f"{i+1}/{len(density_filenames)}--Calculating prior probabilities for {density_filename}...")
     prior_probabilities = get_prior_probabilities(fitting_probabilities, zScores, z_score_offset)
     prior_probabilities_path = os.path.join(fitout_subdir, "prior_probabilities.txt")
     np.savetxt(prior_probabilities_path, prior_probabilities,fmt='%s')
+
+print("Done calculating prior probabilities.")
 
 
     

@@ -14,7 +14,7 @@ import numpy as np
 from chimerax.core.commands import run
 from chimerax.geometry.place import Place
 import datetime
-import subprocess
+import subprocess, threading
 
 script_dir=os.path.dirname(os.path.realpath(__file__))
 
@@ -704,7 +704,7 @@ class DomainSeeker(ToolInstance):
             return
         pae_directory = pae_directory.replace("\\", "/")
         # 运行子进程
-        self.session.logger.info("start fetching pdb and pae files")
+        self.session.logger.info("Start to fetch pdb and pae files...\n\n")
         arg_list=[f'{script_dir}/fetch_pdb_pae.py',
                   self.error_log_path,
                   protein_list_file_path,
@@ -1197,19 +1197,8 @@ class DomainSeeker(ToolInstance):
         else:
             output_dir = domain_directory.replace("\\", "/")
         # run parse_with_pae.py
-        self.session.logger.info("Start parsing domains")
-        # 打印参数
-        self.session.logger.info(f"pdb directory: {pdb_dir}")
-        self.session.logger.info(f"pae directory: {pae_dir}")
-        self.session.logger.info(f"Output directory: {output_dir}")
-        self.session.logger.info(f"PLDDT cutoff: {plddt_cutoff}")
-        self.session.logger.info(f"PAE cutoff: {pae_cutoff}")
-        self.session.logger.info(f"Clique cutoff: {clique_cutoff}")
-        self.session.logger.info(f"Minimum dege ratio between cliques: {min_dege_ratio_between_cliques}")
-        self.session.logger.info(f"Minimum common nodes ratio between cliques: {min_common_nodes_ratio_between_cliques}")
-        self.session.logger.info(f"Minimum domain length: {minimum_domain_length}")
-        self.session.logger.info(f"Number of process: {n_process}")
         # 启动进程
+        self.session.logger.info("Start to parse domains...\n\n")
         arg_list = [f'{script_dir}/parse_with_pae.py',
                     self.error_log_path,
                     pdb_dir,
@@ -1250,18 +1239,7 @@ class DomainSeeker(ToolInstance):
             return
 
         # run fit_and_score.py
-        print("Start fitting and scoring domains")
-        print(f"Densities directory: {densities_dir}")
-        print(f"Domains directory: {domains_dir}")
-        print(f"Fitout directory: {fitout_dir}")
-        print(f"Threshold: {threshold}")
-        print(f"Resolution: {resolution}")
-        print(f"Number of search: {n_search}")
-        print(f"Negative laplacian cutoff: {negtive_laplacian_cutoff}")
-        print(f"Positive laplacian cutoff: {positive_laplacian_cutoff}")
-        print(f"Number of process: {n_process}")
-        print()
-        print() 
+        self.session.logger.info("Start to fit and score domains...\n\n")
         # 启动进程
         arg_list=[f"{script_dir}/fit_with_chimerax.py",
                   self.error_log_path,
@@ -1274,11 +1252,7 @@ class DomainSeeker(ToolInstance):
                   negtive_laplacian_cutoff,
                   positive_laplacian_cutoff,
                   n_process]
-        if sys.platform == 'win32':
-            wait = False
-        else:
-            wait = True  # Linux: 需要设置wait = True，暂不确定什么原因
-        self.run_detatched_subprocess(arg_list,wait=wait)
+        self.run_detatched_subprocess(arg_list)
     
     def _calculate_prior_probability(self, project_directory, map_dir, fitout_dir, box_num, min_data_per_box, relative_density_cutoff, z_score_offset):
         # Check if the project directory is valid, if not, raise an error
@@ -1296,7 +1270,7 @@ class DomainSeeker(ToolInstance):
             self.session.logger.error(f"Fitout directory {fitout_dir} does not exist")
             return
         # run calculate_prior_probability.py
-        self.session.logger.info("Start calculating prior probabilities")
+        self.session.logger.info("Start to calculate prior probabilities...\n\n")
         arg_list = [f"{script_dir}/calculate_prior_probabilities.py",
                     self.error_log_path,
                     map_dir,
@@ -1337,7 +1311,7 @@ class DomainSeeker(ToolInstance):
                 self.session.logger.error(f"Crosslink file {crosslink_file} does not exist")
                 return
         # run calculate_posterior_probability.py
-        self.session.logger.info("Start calculating posterior probabilities")
+        self.session.logger.info("Start to calculate posterior probabilities...\n\n")
         arg_list = [f"{script_dir}/calculate_posterior_probabilities.py",
                     self.error_log_path,
                     project_directory,
@@ -1351,13 +1325,31 @@ class DomainSeeker(ToolInstance):
         arg_list+=crosslink_files
         self.run_detatched_subprocess(arg_list)
 
+    # 显示进度状态
+    # chimerax只允许主线程更新界面
+    def write_to_chimerax_logger(self,message,type):
+        if type == "info":
+            self.session.logger.info(message)
+        elif type == "warning":
+            self.session.logger.warning(message)
+        elif type == "error":
+            self.session.logger.error(message)
+        elif type == "status":
+            self.session.logger.status(message)
+
+    def read_output(self,stream,type):
+        """读取输出流的线程函数"""
+        try:
+            for line in iter(stream.readline, ''):
+                # 通过 thread_safe 将更新操作调度到主线程
+                self.session.ui.thread_safe(self.write_to_chimerax_logger, line.strip(), type)
+        except (ValueError, RuntimeError):
+            # 流被关闭或会话结束时的正常异常
+            pass
+
 
     def run_detatched_subprocess(self, arg_list, wait=False):
         """启动一个跨平台的后台进程"""
-        kwargs = {
-            'shell': True   # 目前tqdm的调用方式需要使用Shell
-        }
-
         # get dir of executable chimerax
         chimerax_dir = os.path.dirname(os.path.realpath(sys.executable))
 
@@ -1375,34 +1367,47 @@ class DomainSeeker(ToolInstance):
         python_exe = os.path.join(chimerax_dir, python_exe)
         # python_exe = "python"
 
-        # wait=True    # 调试时，等待进程结束，方便查看输出
+        kwargs = {
+            'shell': False,
+            "text": True,    # 输出为文本
+            "bufsize": 1,   # 行缓冲
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.PIPE,
+        }
 
-        # 异步执行
-        if not wait:
-            if sys.platform == 'win32':
-                kwargs['creationflags'] = subprocess.DETACHED_PROCESS   # 本来在GUI子系统下，设置shell=True时，应该不经过终端，直接启动shell。但这个参数设置后，会强制用终端启动，且会断开和主进程的管道。
-                proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env) # 用列表传递python_exe和参数，避免路径中有空格出错
-            else:
-                kwargs['start_new_session'] = True  # Linux: 分离进程组
-                # linux系统下，shell=True时，如果传递命令列表，会无参数启动第一个命令
-                # 因此，linux系统下，指定shell=True时，传递命令字符串
+        # 启动进程
+        if sys.platform == 'win32':
+            # kwargs['creationflags'] = subprocess.DETACHED_PROCESS   # 本来在GUI子系统下，设置shell=True时，应该不经过终端，直接启动shell。但这个参数设置后，会强制用终端启动，且会断开和主进程的管道。
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW   # Windows: 不显示窗口。后续捕获输出到chimerax的logger中
+            # 启动进程
+            proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env) # 用列表传递python_exe和参数，避免路径中有空格出错
+            # 启动进度监控线程
+            status_thread = threading.Thread(target=self.read_output, args=(proc.stdout,"status"))
+            status_thread.daemon = True
+            status_thread.start()
+            # 启动错误监控进程
+            error_thread = threading.Thread(target=self.read_output, args=(proc.stderr,"error"))
+            error_thread.daemon = True
+            error_thread.start()
+        else:
+            # kwargs['start_new_session'] = True  # Linux: 分离进程组
+            # linux系统下，shell=True时，如果传递命令列表，会无参数启动第一个命令。因此，linux系统下，如果指定shell=True时，传递命令字符串
+            if kwargs['shell']:
                 cmd = " ".join([python_exe] + arg_list)
                 proc = subprocess.Popen(cmd, **kwargs, env=env)
-            
-            
-        if wait:    # 后续考虑用其他方式输出报错信息，弹窗或输出到log
-            # PIPE
-            kwargs['stdin'] = subprocess.PIPE
-            kwargs['stdout'] = subprocess.PIPE
-            kwargs['stderr'] = subprocess.PIPE
-
-            if sys.platform == 'win32':
+            else:
                 proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env)
-            else:
-                kwargs['start_new_session'] = True  # Linux: 分离进程组
-                cmd = " ".join([python_exe] + arg_list)
-                proc = subprocess.Popen(cmd, **kwargs, env=env)
+            # 启动进度监控线程
+            status_thread = threading.Thread(target=self.read_output, args=(proc.stdout,"status"))
+            status_thread.daemon = True
+            status_thread.start()
+            # 启动错误监控进程
+            error_thread = threading.Thread(target=self.read_output, args=(proc.stderr,"error"))
+            error_thread.daemon = True
+            error_thread.start()
             
+        # wait=True    # 调试时，等待进程结束，方便查看输出
+        if wait:     
             # 获取输出
             stdout, stderr = proc.communicate()
             # 打印输出
@@ -1410,4 +1415,4 @@ class DomainSeeker(ToolInstance):
             self.session.logger.info(stdout.decode())
             self.session.logger.info("Stderr:")
             self.session.logger.info(stderr.decode())
-            self.session.logger.info("Done.")
+            self.session.logger.info("\n\n")

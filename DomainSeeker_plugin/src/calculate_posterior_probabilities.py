@@ -13,6 +13,7 @@ from collections import defaultdict
 from tqdm import tqdm
 import mrcfile
 from scipy.spatial.distance import cdist
+import warnings
 
 
 project_dir=sys.argv[2]
@@ -111,7 +112,10 @@ for uniprot_id in protein_to_crosslinked_residues_to_domains.keys():
     # 获取位置
     for domain_id in domain_to_crosslink_residues.keys():
         domain_path=os.path.join(origin_domain_dir,uniprot_id+'_'+domain_id+'.pdb')
-        u=mda.Universe(domain_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            # 抑制读取pdb时的冗余警告
+            u=mda.Universe(domain_path)
         for residue_id in domain_to_crosslink_residues[domain_id].keys():
             position=u.select_atoms('resid '+residue_id+" and name CA").positions[0]
             crosslink_node=uniprot_id+':'+residue_id
@@ -635,7 +639,7 @@ for group_id, group in enumerate(density_groups):
     # itertools.product计算若干列表的直积
     group_state_class_digital=0
     crosslink_compliant_states_of_densities_of_group=[crosslink_compliant_states_of_densities[density_id] for density_id in group]
-    for group_state_class in tqdm(itertools.product(*crosslink_compliant_states_of_densities_of_group),total=number_of_group_classes):
+    for group_state_class in tqdm(itertools.product(*crosslink_compliant_states_of_densities_of_group),total=number_of_group_classes,desc=f"Grouping",file=sys.stdout):
         group_state_classes_info[group_id].append(get_group_state_class_info(group_state_class,group_id,group_state_class_digital))
         group_state_class_digital+=1
 
@@ -793,7 +797,7 @@ print()
 # 处理ungrouped_densities
 print("Processing ungrouped_densities :")
 for density_id in set(range(n_densities))-grouped_densities:
-    print("Density", density_id,density_names[density_id])
+    print("Density", density_id,density_names[density_id],flush=True)
     # 预处理
     posterior_state_ids=np.arange(1, len(states_of_densities[density_id])+1)
     posterior_probabilities=np.array(prior_probabilities_of_densities[density_id])
@@ -803,3 +807,5 @@ for density_id in set(range(n_densities))-grouped_densities:
     sorted_posterior_probabilities_of_densities[density_id]=sorted_posterior_probabilities
     save_path=os.path.join(fitout_dir,density_names[density_id]+".mrc","posterior_probabilities.txt")
     save_posterior_results_of_density(save_path,density_id,sorted_posterior_state_ids,sorted_posterior_probabilities)
+
+print("Done calculating posterior probabilities.")

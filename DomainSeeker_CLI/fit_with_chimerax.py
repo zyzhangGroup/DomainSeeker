@@ -4,6 +4,8 @@ import MDAnalysis as mda
 import numpy as np
 import scipy
 import mrcfile
+from tqdm import tqdm
+import warnings
 
 
 # 不同系统的ChimeraX
@@ -18,7 +20,8 @@ def fit(params):
     map_path=os.path.join(map_dir,ref_map_filename).replace("\\","/")
     output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
     cmd=f'{ChimeraX} --nogui --script "{script_dir}/fit_in_chimerax.py {domain_path} {map_path} {output_subdir} {ref_map_threshold} {resolution} {n_search}" --exit'
-    subprocess.call(cmd,shell=True)
+    # 舍弃输出
+    subprocess.run(cmd,shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     
 # 全局变量
 domain_dir=os.path.realpath(sys.argv[1]).replace("\\","/")
@@ -151,13 +154,16 @@ def score(parms):
     density_param_dict=parms[3]
     domain_name=log[:-4]
     domain_path=os.path.join(domain_dir,domain_name+'.pdb')
-    u=mda.Universe(domain_path)     # original domain
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        # 抑制读取pdb时的冗余警告
+        u=mda.Universe(domain_path)     # original domain
     log_path=os.path.join(fitout_dir,density,"fitlogs",log)
     transformation_matrix_list=get_transformation_matrix_list(log_path)
     score_list=[]
     for transformation_matrix in transformation_matrix_list:
         score_list.append(get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,density_param_dict))
-    return score_list
+    return [log[:-4],score_list]
 
 
 if __name__=="__main__":
@@ -166,7 +172,7 @@ if __name__=="__main__":
     map_list=[file_name for file_name in os.listdir(map_dir) if file_name.endswith(".mrc")]
     domain_list=[file_name for file_name in os.listdir(domain_dir) if file_name.endswith(".pdb")]
 
-    for ref_map_filename in map_list:
+    for i, ref_map_filename in enumerate(map_list):
         # fit
         output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
         os.makedirs(output_subdir,exist_ok=True)
@@ -185,10 +191,11 @@ if __name__=="__main__":
 
         params_list=[(domain_filename,ref_map_filename) for domain_filename in domain_list]
 
-        print(f"Fitting {len(domain_list)} domains into {ref_map_filename}...")
-        pool=multiprocessing.Pool(n_process)
-        pool.map(fit,params_list)
-        pool.close()
+        with multiprocessing.Pool(n_process) as pool:
+            # 强制迭代tqdm对象，更新进度条
+            for result in tqdm(pool.imap_unordered(fit,params_list),total=len(domain_list),desc=f"{i+1}/{len(map_list)}--Fitting {ref_map_filename}",file=sys.stdout):
+                # 处理结果
+                pass
 
         # score
         ref_map_path=os.path.join(map_dir,ref_map_filename).replace("\\","/")
@@ -199,8 +206,9 @@ if __name__=="__main__":
         pool_params=[(ref_map_filename,ref_map_mat_laplacian,log,density_param_dict) for log in log_list]
 
         pool=multiprocessing.Pool(n_process)
-        scores=pool.map(score,pool_params)
+        scores=list(tqdm(pool.imap_unordered(score,pool_params),total=len(log_list),desc=f"{i+1}/{len(map_list)}--Locally scoring {ref_map_filename}",file=sys.stdout)) #1.将结果存入列表。2.list强制迭代tqdm对象，更新进度条
         pool.close()
+        pool.join()
 
         config_path=os.path.join(fitout_dir,ref_map_filename,"overlap_score_config.txt")
         f=open(config_path,'w')
@@ -216,9 +224,12 @@ if __name__=="__main__":
         f.close()
 
 
-        scores_dict={log[:-4]:score_list for log,score_list in zip(log_list,scores)}
+        scores_dict={domain_name:score_list for domain_name,score_list in scores}
 
         scores_path=os.path.join(fitout_dir,ref_map_filename,"overlap_scores.npy")
         np.save(scores_path,scores_dict,allow_pickle=True)
+
+    print("Done fitting and scoring.")
+
 
 

@@ -1,7 +1,6 @@
 # 全局异常处理
 import domainseeker_errorLog
 #----------------------------------------------------------------------------------------------------
-
 import os,sys
 import wget
 import numpy as np
@@ -21,15 +20,14 @@ else:
 os.makedirs(output_pdb_dir,exist_ok=True)
 missing_pdbs=[]
 
+
 os.makedirs(output_pae_dir,exist_ok=True)
 missing_paes=[]
 
 
 UniprotID_list=np.loadtxt(UniprotID_list_path,dtype=str,ndmin=1)
 n=len(UniprotID_list)
-print(f"Total number of UniprotIDs: {n}")
-print("Downloading PDB and PAE files...")
-for i in tqdm(range(n)):
+for i in tqdm(range(n),desc='Downloading',file=sys.stdout):
     ID=UniprotID_list[i]
     pdb_path=os.path.join(output_pdb_dir,ID+'.pdb')
     if not os.path.exists(pdb_path):
@@ -46,7 +44,6 @@ for i in tqdm(range(n)):
             wget.download(pae_url,pae_path,bar='')
         except Exception as e:
             missing_paes.append(ID)
-print("Done!")
 
 
 missing_pdb_log_path=os.path.join(output_dir,'missing_pdb.log')
@@ -67,3 +64,5 @@ missing_pae_log.close()
 
 missing_pdb_log.close()
 missing_pae_log.close()
+
+print("Done fetching PDB and PAE files.")
