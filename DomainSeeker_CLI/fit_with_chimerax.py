@@ -7,21 +7,33 @@ import mrcfile
 from tqdm import tqdm
 import warnings
 
+script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
+
+python_exec=os.path.realpath(sys.executable)
+chimerax_dir = os.path.dirname(python_exec)
+# mac特殊处理
+if sys.platform == 'darwin':
+    chimerax_dir = chimerax_dir.replace("/Contents/bin", "/Contents/MacOS")
 
 # 不同系统的ChimeraX
-if sys.platform == 'win32':
-    ChimeraX="ChimeraX-console"     # windows
+# windows
+if sys.platform in ["win32","win64"]:
+    ChimeraX=os.path.join(chimerax_dir,"ChimeraX-console.exe")
+# mac
+elif sys.platform=="darwin":
+    ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
+# linux
 else:
-    ChimeraX="chimerax"     # Linux
+    ChimeraX = os.path.join(chimerax_dir,"chimerax")
 
 def fit(params):
     domain_filename, ref_map_filename = params
     domain_path=os.path.join(domain_dir,domain_filename).replace("\\","/")
     map_path=os.path.join(map_dir,ref_map_filename).replace("\\","/")
     output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
-    cmd=f'{ChimeraX} --nogui --script "{script_dir}/fit_in_chimerax.py {domain_path} {map_path} {output_subdir} {ref_map_threshold} {resolution} {n_search}" --exit'
+    cmd_list = [ChimeraX, "--nogui", "--script", f'{script_dir}/fit_in_chimerax.py {domain_path} {map_path} {output_subdir} {ref_map_threshold} {resolution} {n_search}', "--exit"]
     # 舍弃输出
-    subprocess.run(cmd,shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    subprocess.run(cmd_list,shell=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     
 # 全局变量
 domain_dir=os.path.realpath(sys.argv[1]).replace("\\","/")
@@ -37,8 +49,6 @@ fit_map_laplacian_cutoff_low=-2
 fit_map_laplacian_cutoff_high=15
 
 n_process=int(sys.argv[9])
-
-script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
 ## 局部打分
 def get_ref_map_mat_laplacian_and_params(ref_map_path):

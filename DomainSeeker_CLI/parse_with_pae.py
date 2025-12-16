@@ -19,6 +19,7 @@ if len(sys.argv)>5:
     min_dege_ratio_between_cliques=float(sys.argv[8])
     min_common_nodes_ratio_between_cliques=float(sys.argv[9])
     minimum_domain_length=int(sys.argv[10])
+    maximum_domain_length=int(sys.argv[11])
 else:
     plddt_cutoff=70 
     pae_cutoff=5
@@ -26,6 +27,7 @@ else:
     min_dege_ratio_between_cliques=0.6
     min_common_nodes_ratio_between_cliques=0.5
     minimum_domain_length=40
+    maximum_domain_length=1000
 
 
 def parse_pae_file(pae_json_file):
@@ -149,7 +151,7 @@ def clusters_from_clique_graph_component(clique_graph):
     return clusters
 
 
-def get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques,minimum_domain_length):
+def get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques,minimum_domain_length, maximum_domain_length):
     # constract the residue network
     residue_graph=get_residue_graph(u,pae_matrix,plddt_cutoff,pae_cutoff)
     # get cliques that cover the residue network
@@ -158,7 +160,7 @@ def get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cli
     clique_graph=get_clique_graph(residue_graph,cliques,clique_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques)
     # get clusters
     clusters=clusters_from_clique_graph_component(clique_graph)
-    selected_clusters=[cluster for cluster in clusters if len(cluster)>=minimum_domain_length]
+    selected_clusters=[cluster for cluster in clusters if minimum_domain_length<=len(cluster)<=maximum_domain_length]
     return selected_clusters
 
 def save_pdbs(u,clusters,uniprot_id,output_dir):
@@ -190,7 +192,7 @@ def run(pdb_file_name):
         # get pae matrix
         pae_matrix=parse_pae_file(pae_path)
         # clustering
-        clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques,minimum_domain_length)
+        clusters=get_clusters(u,pae_matrix,plddt_cutoff,pae_cutoff,min_dege_ratio_between_cliques,min_common_nodes_ratio_between_cliques,minimum_domain_length,maximum_domain_length)
         # save pdbs
         save_pdbs(u,clusters,uniprot_id,output_dir)
 

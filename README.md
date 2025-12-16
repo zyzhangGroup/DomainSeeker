@@ -6,6 +6,8 @@ This  repository provides two implementations of DomainSeeker. The first is a pl
 
 # DomainSeeker_plugin
 
+Support Windows, Linux
+
 ## Installation
 
 ### Install ChimeraX
@@ -141,6 +143,8 @@ The figure below illustrates how to visualize the results of the prior calculati
 In the results of the provided example, visual inspection reveals that the correct protein for density B is ranked first with high confidence. In contrast, for density A, the domain of the correct protein is ranked second, while the top-ranked structure appears to exhibit a slightly better visual fit.
 
 ### Integrate extra experimental data
+
+To compute the posterior, the extracted density must preserve its relative positional information.
 
 The figure below shows the interface and parameters of the posterior calculation module. The posterior calculation component is designed to incorporate data from multiple experimental sources, with cross-linking mass spectrometry (XL-MS) data integration currently implemented.
 
