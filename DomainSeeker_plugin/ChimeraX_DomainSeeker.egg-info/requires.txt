@@ -1,5 +1,0 @@
-ChimeraX-Core>=1.6
-ChimeraX-UI>=1.6
-mdanalysis
-networkx
-wget

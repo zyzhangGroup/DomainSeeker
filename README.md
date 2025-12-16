@@ -28,6 +28,46 @@ devel install DomainSeeker_extension_path
 
 Any required dependencies will be automatically checked and installed by ChimeraX.
 
+### Update or reinstall DomainSeeker
+
+1. Uninstall the DomainSeeker plugin in ChimeraX by type in the following command in the ChimeraX command line:
+
+   ```
+   toolshed uninstall DomainSeeker
+   ```
+
+2. Ensure that the source directory is free of residual installation files by type in the following command in the ChimeraX command line:
+
+   ```
+   devel clean DomainSeeker_extension_path
+   ```
+
+3. **Restart ChimeraX**.
+
+4. Reinstall DomainSeeker by type in the following command in the ChimeraX command line:
+
+   ```
+   devel install DomainSeeker_extension_path
+   ```
+
+## Usage
+
+### Launch the DomainSeeker Plugin
+
+The DomainSeeker plugin can be launched via the menu bar by selecting  **"Tools" → "Structure Analysis" → "DomainSeeker"** .
+
+<img src="/images/launching.png" width="800px">
+
+We show the interface of DomainSeeker here:
+
+<img src="/images/interface.png" width="650px">
+
+### Fetch pdb and pae files from AFDB
+
+First of all, select the project directory in the "Global options" module of the plugin.
+
+<img src="/images/project_directory.png" width="600px">
+
 ## Workflow
 
 You can use the provided Example data to quickly test the plugin.  
@@ -68,6 +108,7 @@ After obtaining the PDB and PAE files, click the "Parse Domains" button to perfo
 > **clique_cutoff**: Cliques containing at least this number of residues are treated as nodes in the cluster network; those smaller than the threshold are filtered out.  
 > **min_edge_ratio** & **min_common_nodes_ratio**: In the residue network, two cliques are connected in the cluster network if they share at least *min_common_nodes_ratio residues*, or if the edge  between them reaches *min_edge_ratio*. Connected cliques collectively form a domain.  
 > **min_domain_size**: Domains containing fewer than this number of residues are filtered out.  
+> **max_domain_size**: Domains containing more than this number of residues are filtered out.  
 > **n_process**: Number of parallel processes to use.  
 
 For the AF3 model,  setting  *plddt_cutoff* = 50 may result in a better performance.
