@@ -65,12 +65,6 @@ We show the interface of DomainSeeker here:
 
 <img src="/images/interface.png" width="650px">
 
-### Fetch pdb and pae files from AFDB
-
-First of all, select the project directory in the "Global options" module of the plugin.
-
-<img src="/images/project_directory.png" width="600px">
-
 ## Workflow
 
 You can use the provided Example data to quickly test the plugin.  
