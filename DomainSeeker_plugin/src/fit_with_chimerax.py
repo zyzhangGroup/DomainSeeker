@@ -28,7 +28,7 @@ elif sys.platform=="darwin":
     ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
 # linux
 else:
-    ChimeraX = os.path.join(chimerax_dir,"chimerax")
+    ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
 
 def fit(params):
     domain_filename, ref_map_filename = params
