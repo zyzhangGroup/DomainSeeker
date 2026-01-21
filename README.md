@@ -18,15 +18,18 @@ The recommanded version is 1.10.
 
 ### Install DomainSeeker
 
-To install DomainSeeker, enter the following command in the ChimeraX command line：
+To install DomainSeeker, enter the following command in the ChimeraX command line:
 
 ```
-devel install DomainSeeker_extension_path
+devel install DomainSeeker_plugin_path
 ```
 
-"DomainSeeker_extension_path" refers to the file path of the "DomainSeeker_extension" folder after you have downloaded and extracted it.
+"DomainSeeker_plugin_path" refers to the file path of the "DomainSeeker_plugin" folder after you have downloaded and extracted it.
 
-Any required dependencies will be automatically checked and installed by ChimeraX.
+Any required dependencies will be automatically checked and installed by ChimeraX.  
+
+Installation time depends on how long it takes to download the dependencies.  
+
 
 ### Update or reinstall DomainSeeker
 
@@ -99,7 +102,9 @@ Alternatively, in the "Fetch pdb and pae files from AFDB" module, you can select
 
 ### Parse proteins into domains based on PAE
 
-After obtaining the PDB and PAE files, click the "Parse Domains" button to perform domain partitioning based on the PAE information.
+After obtaining the PDB and PAE files, click the "Parse Domains" button to perform domain partitioning based on the PAE information.  
+
+When running with the data in the Example folder, setting n_processto 10 allows this step to complete in approximately 8 seconds.
 
 <img src="/images/domain_parsing.png" width="600px">
 
@@ -120,7 +125,7 @@ The output files will be saved in the folder specified by the "Domain Directory"
 
 ### Fit domains into densities and score fitted domains
 
-For domain-density fitting, the EM density map must first be segmented (manually or automatically) into regions of interest, each saved as a separate .mrc file. Provide the path to the directory containing these files in the global option—"Map directory".
+For domain-density fitting, the EM density map must first be segmented (manually or automatically) into regions of interest, each saved as a separate .mrc file. Provide the path to the directory containing these files in the global option-"Map directory".
 
 <img src="/images/map_directory.png" width="600px">
 
@@ -128,7 +133,9 @@ The image below shows two example regions used in this document:
 
 <img src="/images/map_example.png" width="600px">
 
-After specifying both the "Map directory" and "Domain directory", click the "Fit_score" button to perform domain-density fitting.  
+After specifying both the "Map directory" and "Domain directory" and assigning appropriate values to the parameters, click the "Fit_score" button to perform domain-density fitting.  
+
+When running with the data in the Example folder, setting n_processto 10 allows this step to complete in approximately 80 seconds.  
 
 <img src="/images/fit_score.png" width="600px">  
 
