@@ -158,7 +158,7 @@ The following image displays the user interface and configurable parameters of t
 
 > **box_num**: When calculating z-scores, data points are partitioned into a grid of box_num² cells based on their overlap volume and correlation values.  
 > **relative_density_cutoff**: Relative density is defined as the ratio of the number of data points in a grid cell to the average number of data points across all cells. Only cells with a relative density above this threshold are used when calculating the average curve, to minimize the influence of anomalies.  
-> **min_data_per_box**: After filtering cells by relative density, cells within the same overlap volume range are grouped into *box_num* bins. Each bin must contain at least *min_data_per_box* data points; otherwise, it is merged with an adjacent bin. The mean and standard deviation of the correlation values are computed for each bin to derive an interpolation function across overlap volumes.
+> **min_data_per_box**: After filtering cells by relative density, cells within the same overlap volume range are grouped into *box_num* bins. Each bin must contain at least *min_data_per_box* data points; otherwise, it is merged with an adjacent bin. The mean and standard deviation of the correlation values are computed for each bin to derive an interpolation function across overlap volumes.  
 > **zScore_offset**: The z-score is converted to a probability using a sigmoid function: `Sigmoid(zScore – offset)`.  
 
 The output files generated from the prior calculation are shown in the image below:  
