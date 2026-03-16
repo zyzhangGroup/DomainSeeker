@@ -1,11 +1,17 @@
+import os,argparse
 import MDAnalysis as mda
 import numpy as np
-import sys,os
 
-argv=sys.argv
-domain_dir=argv[1]
-fitout_subdir=argv[2]
-domain_list=argv[3:]    #without suffix
+parser = argparse.ArgumentParser(description="Create .pdb files of fitted domains")
+parser.add_argument("domain_dir")
+parser.add_argument("fitout_subdir", help="fitout_subdir is the subdirectory (e.g., 'A.mrc') of the fitout_dir")
+parser.add_argument("domain_list", nargs="+")
+argument = parser.parse_args()
+
+
+domain_dir=argument.domain_dir
+fitout_subdir=argument.fitout_subdir
+domain_list=argument.domain_list
 
 
 def get_transformation_matrix_list(log_path):
