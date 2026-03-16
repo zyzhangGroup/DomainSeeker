@@ -1,4 +1,4 @@
-import os,sys
+import os,sys,argparse,shutil
 import subprocess,multiprocessing
 import MDAnalysis as mda
 import numpy as np
@@ -36,15 +36,36 @@ def fit(params):
     subprocess.run(cmd_list,shell=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     
 # 全局变量
-domain_dir=os.path.realpath(sys.argv[1]).replace("\\","/")
-map_dir=os.path.realpath(sys.argv[2]).replace("\\","/")
-fitout_dir=os.path.realpath(sys.argv[3]).replace("\\","/")
-ref_map_threshold=float(sys.argv[4])
-resolution=float(sys.argv[5])
-n_search=int(sys.argv[6])
+parser = argparse.ArgumentParser(description="Perform domain-density fitting. The EM density map must first be segmented (manually or automatically) into regions of interest, each saved as a separate .mrc file",
+                                 epilog="Use get_fitted_domains.py to obtain .pdb files of the fitted domains")
+parser.add_argument("domain_dir")
+parser.add_argument("map_dir")
+parser.add_argument("fitout_dir")
+parser.add_argument("ref_map_threshold",help="Electron density map threshold value")
+parser.add_argument("resolution",help="Resolution of the electron density map, used to generate simulated densities for individual domains")
+parser.add_argument("n_search",help="Number of initial starting positions for gradient-based correlation optimization. A value of 200 is recommended for typical domain sizes, balancing computational cost and accuracy. Larger density regions may require more starting positions for optimal fitting")
+parser.add_argument("negtive_laplacian_cutoff",help="Parameters for evaluating overlap region matching. Set these to cover the main structural regions of the density map, while excluding noisy areas")
+parser.add_argument("positive_laplacian_cutoff",help="Parameters for evaluating overlap region matching. Set these to cover the main structural regions of the density map, while excluding noisy areas")
+parser.add_argument("ncores",help="Number of parallel processes to use")
+parser.add_argument("--chimerax", default = False, help="Path to ChimeraX if it cannot be determined automatically")
 
-negtive_laplacian_cutoff=float(sys.argv[7])
-positive_laplacian_cutoff=float(sys.argv[8])
+argument = parser.parse_args()
+
+domain_dir = argument.domain_dir
+map_dir = argument.map_dir
+fitout_dir = argument.fitout_dir
+ref_map_threshold = float(argument.ref_map_threshold)
+resolution = float(argument.resolution)
+n_search = int(argument.n_search)
+negtive_laplacian_cutoff = float(argument.negtive_laplacian_cutoff)
+positive_laplacian_cutoff = float(argument.positive_laplacian_cutoff)
+n_process=int(argument.ncores)
+if argument.chimerax:
+    ChimeraX = argument.chimerax
+
+if shutil.which(ChimeraX) is None:
+    raise ValueError('ChimeraX not found')
+
 fit_map_laplacian_cutoff_low=-2
 fit_map_laplacian_cutoff_high=15
 

@@ -1,16 +1,26 @@
-import os, sys
+import os, sys, argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import math
 from scipy.interpolate import interp1d
 
-map_dir = sys.argv[1]
-fitout_dir = sys.argv[2]
-box_num = int(sys.argv[3])
-min_entries_per_box = int(sys.argv[4])
-relative_density_cutoff = float(sys.argv[5])
-z_score_offset = float(sys.argv[6])
+parser = argparse.ArgumentParser(description="Calculate prior probability of each fitted domain",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("map_dir")
+parser.add_argument("fitout_dir")
+parser.add_argument("--box_num", default=5, help="When calculating z-scores, data points are partitioned into a grid of box_num² cells based on their overlap volume and correlation values")
+parser.add_argument("--min_entries_per_box", default=200, help="After filtering cells by relative density, cells within the same overlap volume range are grouped into box_num bins. Each bin must contain at least min_data_per_box data points; otherwise, it is merged with an adjacent bin. The mean and standard deviation of the correlation values are computed for each bin to derive an interpolation function across overlap volumes")
+parser.add_argument("--relative_density_cutoff", default=1, help="Relative density is defined as the ratio of the number of data points in a grid cell to the average number of data points across all cells. Only cells with a relative density above this threshold are used when calculating the average curve, to minimize the influence of anomalies")
+parser.add_argument("--z_score_offset", default=30, help="The z-score is converted to a probability using a sigmoid function: Sigmoid(zScore - offset)")
+argument = parser.parse_args()
+
+map_dir = argument.map_dir
+fitout_dir = argument.fitout_dir
+box_num = int(argument.box_num)
+min_entries_per_box = int(argument.min_entries_per_box)
+relative_density_cutoff = float(argument.relative_density_cutoff)
+z_score_offset = float(argument.z_score_offset)
 
 grids_x=box_num
 grids_y=box_num
