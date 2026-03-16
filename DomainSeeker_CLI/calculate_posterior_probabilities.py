@@ -1,6 +1,6 @@
+import os,sys,argparse
 import numpy as np
 import MDAnalysis as mda
-import os,sys
 import matplotlib.pyplot as plt
 import networkx as nx
 from scipy.spatial.transform import Rotation
@@ -13,16 +13,28 @@ import warnings
 
 
 project_dir="."
-origin_domain_dir=sys.argv[1]
-map_dir=sys.argv[2]
-map_level=float(sys.argv[3])
-fitout_dir=sys.argv[4]
 
-acceptor_prior_probability_cutoff=float(sys.argv[5])
-donor_prior_probability_cutoff=float(sys.argv[6])
-evidence_strength=float(sys.argv[7])
+parser = argparse.ArgumentParser(description="Integrate extra experimental data")
+parser.add_argument("origin_domain_dir")
+parser.add_argument("map_dir")
+parser.add_argument("map_level",help="The threshold value of the density map, used to determine whether two densities are adjacent")
+parser.add_argument("fitout_dir")
+parser.add_argument("acceptor_prior_probability_cutoff", help="These dual thresholds control which states participate in posterior calculations to reduce computational cost while preserving accuracy. States with prior probabilities exceeding the donor_cutoff may influence other densities, while those above the acceptor_cutoff may be influenced by external evidence. Only states meeting either threshold are included in the calculation")
+parser.add_argument("donor_prior_probability_cutoff",help="These dual thresholds control which states participate in posterior calculations to reduce computational cost while preserving accuracy. States with prior probabilities exceeding the donor_cutoff may influence other densities, while those above the acceptor_cutoff may be influenced by external evidence. Only states meeting either threshold are included in the calculation")
+parser.add_argument("evidence_strength",help="The strength of evidence provided by the cross-linking data. A higher value increases the impact of the cross-linking data on the final results.")
+parser.add_argument("crosslink_files",nargs="+")
+argument=parser.parse_args()
 
-crosslink_files = sys.argv[8:]
+origin_domain_dir=argument.origin_domain_dir
+map_dir=argument.map_dir
+map_level=float(argument.map_level)
+fitout_dir=argument.fitout_dir
+
+acceptor_prior_probability_cutoff=float(argument.acceptor_prior_probability_cutoff)
+donor_prior_probability_cutoff=float(argument.donor_prior_probability_cutoff)
+evidence_strength=float(argument.evidence_strength)
+
+crosslink_files=argument.crosslink_files
 
 
 def read_prior_probabilities(file_path):
