@@ -1,33 +1,38 @@
+import os,sys,argparse
 import numpy as np
 import networkx as nx
 import MDAnalysis as mda
-import os,sys
 import multiprocessing
 from tqdm import tqdm
 import warnings
 
-pdb_dir=sys.argv[1]
-pae_dir=sys.argv[2]
-output_dir=sys.argv[3]
-n_processors=int(sys.argv[4])
+parser = argparse.ArgumentParser(description="Perform domain partitioning based on the PAE information",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("pdb_dir")
+parser.add_argument("pae_dir")
+parser.add_argument("output_dir")
+parser.add_argument("--plddt_cutoff", default = 70, help="Residues with a pLDDT value above this threshold are included as nodes in the residue graph. Residues falling below the threshold are considered to have low prediction confidence and are excluded.")
+parser.add_argument("--pae_cutoff", default = 5, help="An edge is established between two residues if their average PAE exceeds this value.")
+parser.add_argument("--clique_cutoff", default = 4, help="Cliques containing at least this number of residues are treated as nodes in the cluster network; those smaller than the threshold are filtered out")
+parser.add_argument("--min_dege_ratio_between_cliques", default = 0.6, help="In the residue network, two cliques are connected in the cluster network if they share at least min_common_nodes_ratio residues, or if the edge between them reaches min_edge_ratio. Connected cliques collectively form a domain.")
+parser.add_argument("--min_common_nodes_ratio_between_cliques", default = 0.5, help="In the residue network, two cliques are connected in the cluster network if they share at least min_common_nodes_ratio residues, or if the edge between them reaches min_edge_ratio. Connected cliques collectively form a domain.")
+parser.add_argument("--minimum_domain_length", default = 40, help="Domains containing fewer than this number of residues are filtered out.")
+parser.add_argument("--maximum_domain_length", default = 1000, help="Domains containing more than this number of residues are filtered out.")
+parser.add_argument("--n_processors", default = 10, help="Number of parallel processes to use")
+argument = parser.parse_args()
 
-#parameters
-if len(sys.argv)>5:
-    plddt_cutoff=float(sys.argv[5])
-    pae_cutoff=float(sys.argv[6])
-    clique_cutoff=int(sys.argv[7])
-    min_dege_ratio_between_cliques=float(sys.argv[8])
-    min_common_nodes_ratio_between_cliques=float(sys.argv[9])
-    minimum_domain_length=int(sys.argv[10])
-    maximum_domain_length=int(sys.argv[11])
-else:
-    plddt_cutoff=70 
-    pae_cutoff=5
-    clique_cutoff=4
-    min_dege_ratio_between_cliques=0.6
-    min_common_nodes_ratio_between_cliques=0.5
-    minimum_domain_length=40
-    maximum_domain_length=1000
+pdb_dir=argument.pdb_dir
+pae_dir=argument.pae_dir
+output_dir=argument.output_dir
+n_processors=int(argument.n_processors)
+plddt_cutoff=float(argument.plddt_cutoff)
+pae_cutoff=float(argument.pae_cutoff)
+clique_cutoff=int(argument.clique_cutoff)
+min_dege_ratio_between_cliques=float(argument.min_dege_ratio_between_cliques)
+min_common_nodes_ratio_between_cliques=float(argument.min_common_nodes_ratio_between_cliques)
+minimum_domain_length=int(argument.minimum_domain_length)
+maximum_domain_length=int(argument.maximum_domain_length)
+
 
 
 def parse_pae_file(pae_json_file):
