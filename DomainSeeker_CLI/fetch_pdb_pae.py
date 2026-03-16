@@ -1,24 +1,21 @@
-import os,sys
+import os,sys,argparse
 import wget
 import numpy as np
 from tqdm import tqdm
 
-UniprotID_list_path=sys.argv[1]
-output_pdb_dir=sys.argv[2]
-output_pae_dir=sys.argv[3]
 
+parser = argparse.ArgumentParser(description="Fetch pdb and pae files from AFDB")
+parser.add_argument("uniprot_list", help="Text file with one UniProt IDs per line")
+parser.add_argument("pdb_dir", help="PDB files will be saved here")
+parser.add_argument("pae_dir", help="PAE files will be saved here")
+argument = parser.parse_args()
 
-
-os.makedirs(output_pdb_dir,exist_ok=True)
-missing_pdbs=[]
-
-os.makedirs(output_pae_dir,exist_ok=True)
-missing_paes=[]
-
+UniprotID_list_path=argument.uniprot_list
+output_pdb_dir=argument.pdb_dir
+output_pae_dir=argument.pae_dir
 
 os.makedirs(output_pdb_dir,exist_ok=True)
 missing_pdbs=[]
-
 
 os.makedirs(output_pae_dir,exist_ok=True)
 missing_paes=[]
