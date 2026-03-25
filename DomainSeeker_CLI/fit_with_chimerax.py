@@ -9,22 +9,12 @@ import warnings
 
 script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
-python_exec=os.path.realpath(sys.executable)
-chimerax_dir = os.path.dirname(python_exec)
-# mac特殊处理
-if sys.platform == 'darwin':
-    chimerax_dir = chimerax_dir.replace("/Contents/bin", "/Contents/MacOS")
-
 # 不同系统的ChimeraX
 # windows
 if sys.platform in ["win32","win64"]:
-    ChimeraX=os.path.join(chimerax_dir,"ChimeraX-console.exe")
-# mac
-elif sys.platform=="darwin":
-    ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
-# linux
+    ChimeraX="ChimeraX-console"
 else:
-    ChimeraX = os.path.join(chimerax_dir,"chimerax")
+    ChimeraX = "ChimeraX"
 
 def fit(params):
     domain_filename, ref_map_filename = params
