@@ -75,6 +75,8 @@ def save_relative_grids_density_plot(grids,number_of_data, density_filename):
     plt.colorbar()
     save_path=os.path.join(fitout_dir, density_filename, "local_assessing_relative_density.png")
     plt.savefig(save_path)
+    # 关闭图像
+    plt.close()
 
 def merge_grids_to_box(grids):
      box=[]
@@ -143,6 +145,7 @@ def get_zScores(scores, density_filename):
     plt.plot(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,0]+2*ave_std_list[:,1],c='black',linestyle='--')
     plot_save_path=os.path.join(fitout_dir, density_filename, "local_assessing.png")
     plt.savefig(plot_save_path)
+    plt.close()
     # calculate z-scores
     zScores=[]
     for row in scores:
@@ -192,7 +195,7 @@ def get_prior_probabilities(fitting_probabilities, zScores, offset):
     return prior_probabilities
 
 
-density_filenames = os.listdir(map_dir)
+density_filenames = [file_name for file_name in os.listdir(map_dir) if file_name.endswith(".mrc")]
 
 for i, density_filename in enumerate(density_filenames):
     fitout_subdir = os.path.join(fitout_dir, density_filename)

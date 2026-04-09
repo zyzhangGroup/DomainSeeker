@@ -13,11 +13,8 @@ import warnings
 
 script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
-python_exec=os.path.realpath(sys.executable)
+python_exec=sys.executable
 chimerax_dir = os.path.dirname(python_exec)
-# mac特殊处理
-if sys.platform == 'darwin':
-    chimerax_dir = chimerax_dir.replace("/Contents/bin", "/Contents/MacOS")
 
 # 不同系统的ChimeraX
 # windows
@@ -35,7 +32,7 @@ def fit(params):
     domain_path=os.path.join(domain_dir,domain_filename).replace("\\","/")
     map_path=os.path.join(map_dir,ref_map_filename).replace("\\","/")
     output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
-    cmd_list = [ChimeraX, "--nogui", "--script", f'{script_dir}/fit_in_chimerax.py {domain_path} {map_path} {output_subdir} {ref_map_threshold} {resolution} {n_search}', "--exit"]
+    cmd_list = [ChimeraX, "--nogui", "--script", f"'{script_dir}/fit_in_chimerax.py' '{domain_path}' '{map_path}' '{output_subdir}' {ref_map_threshold} {resolution} {n_search}", "--exit"]
     # 舍弃输出
     subprocess.run(cmd_list,shell=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     
