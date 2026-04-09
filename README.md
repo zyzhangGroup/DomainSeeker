@@ -6,7 +6,7 @@ This  repository provides two implementations of DomainSeeker. The first is a pl
 
 # DomainSeeker_plugin
 
-Support Windows, Linux
+Support Windows, Linux, Mac
 
 ## Installation
 
