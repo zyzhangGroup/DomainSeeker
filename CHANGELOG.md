@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+### [1.0.1] - 2026-04-13
+More detailed status bar in ChimeraX while calculating prior probabilities.
+
 ### [1.0.1] - 2026-04-09
 Adpat Mac OS.
 

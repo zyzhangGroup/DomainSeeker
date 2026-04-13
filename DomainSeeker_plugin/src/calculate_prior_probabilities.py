@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import math
 from scipy.interpolate import interp1d
+from tqdm import tqdm
 
 map_dir = sys.argv[2]
 fitout_dir = sys.argv[3]
@@ -90,7 +91,7 @@ def ave_std(box,colume):
         data.append(row[colume])
     return [np.mean(data),np.std(data)]
 
-def get_zScores(scores, density_filename):
+def get_zScores(scores, density_filename, desc):
     data=scores[:,1:].astype(float)
     max_vol=np.max(data[:,0])
     min_vol=np.min(data[:,0])
@@ -148,7 +149,7 @@ def get_zScores(scores, density_filename):
     plt.close()
     # calculate z-scores
     zScores=[]
-    for row in scores:
+    for row in tqdm(scores,total=len(scores),desc=desc,file=sys.stdout):
             vol=int(row[1])
             cor=float(row[2])
             zScore=(cor-f_ave(vol))/f_std(vol)
@@ -215,8 +216,10 @@ for i, density_filename in enumerate(density_filenames):
 
     fitting_probabilities_path=os.path.join(fitout_subdir,"fitting_probabilities.npy")
     fitting_probabilities={}
-    print(f"{i+1}/{len(density_filenames)}--Calculating fitting probabilities for {density_filename}...")
-    for file_name in os.listdir(fitlog_subdir):
+    # 立即输出，无缓冲
+    status_desc = f"{i+1}/{len(density_filenames)}--Calculating fitting probabilities"
+    fit_logs = os.listdir(fitlog_subdir)
+    for file_name in tqdm(fit_logs,total = len(fit_logs), desc=status_desc, file=sys.stdout):
         if file_name.endswith(".log"):
             fit_log_path=os.path.join(fitlog_subdir,file_name)
             if os.path.getsize(fit_log_path)>0:
@@ -226,7 +229,7 @@ for i, density_filename in enumerate(density_filenames):
 
     
     # 计算z-scores
-    print(f"{i+1}/{len(density_filenames)}--Calculating z-scores for {density_filename}...")
+    status_desc = f"{i+1}/{len(density_filenames)}--Calculating z-scores"
     # 读取scores
     scores_path = os.path.join(fitout_subdir, "overlap_scores.npy")
     if os.path.exists(scores_path):
@@ -238,17 +241,17 @@ for i, density_filename in enumerate(density_filenames):
                     scores.append([f"{domain}_{fit_id}",score[0],score[1]])
         scores=np.array(scores)
         # 计算z-scores
-        zScores=get_zScores(scores, density_filename)
+        zScores=get_zScores(scores, density_filename, status_desc)
     else:
         print(f"No scores found for {density_filename}",file=sys.stderr)
 
     # 计算prior_probabilities
-    print(f"{i+1}/{len(density_filenames)}--Calculating prior probabilities for {density_filename}...")
+    print(f"{i+1}/{len(density_filenames)}--Calculating prior probabilities", flush=True)
     prior_probabilities = get_prior_probabilities(fitting_probabilities, zScores, z_score_offset)
     prior_probabilities_path = os.path.join(fitout_subdir, "prior_probabilities.txt")
     np.savetxt(prior_probabilities_path, prior_probabilities,fmt='%s')
 
-print("Done calculating prior probabilities.")
+print("Done calculating prior probabilities.", flush=True)
 
 
     
