@@ -137,8 +137,9 @@ def get_zScores(scores, density_filename, desc):
                           +[[ave_std_list[box_num-1][0],ave_std_list[box_num-1][1]]])
     
     # get the interpolation function of ave and std
-    f_ave=interp1d(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,0],3)
-    f_std=interp1d(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,1],3)
+    n_interp=1  # 线性插值，取高阶反而会导致插值误差大
+    f_ave=interp1d(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,0],n_interp)
+    f_std=interp1d(np.linspace(min_vol-0.5*box_step,max_vol+0.5*box_step,box_num+2),ave_std_list[:,1],n_interp)
     # show data
     plt.figure(figsize=(10,10))
     plt.scatter(data[:,0],data[:,1],s=0.5)

@@ -14,19 +14,24 @@ from tqdm import tqdm
 import mrcfile
 from scipy.spatial.distance import cdist
 import warnings
+import json
 
 
 project_dir=sys.argv[2]
 origin_domain_dir=sys.argv[3]
 map_dir=sys.argv[4]
-map_level=float(sys.argv[5])
+# map threshold
+map_levels=sys.argv[5]
 fitout_dir=sys.argv[6]
 
 acceptor_prior_probability_cutoff=float(sys.argv[7])
 donor_prior_probability_cutoff=float(sys.argv[8])
 evidence_strength=float(sys.argv[9])
 
-crosslink_files = sys.argv[10:]
+# 对称性配置文件
+symmetry_transform_file=sys.argv[10]
+# 交联质谱文件
+crosslink_files = sys.argv[11:]
 
 
 def read_prior_probabilities(file_path):
@@ -45,6 +50,22 @@ density_names.sort()
 density_name_to_index = {name:i for i,name in enumerate(density_names)}
 n_densities=len(density_names)
 
+# 获取map_levels
+# 如果map_levels参数能转换成float，则直接使用该值填充为列表
+# 如果不能转换成float，则尝试读取json文件，并将文件中的字典转换为列表
+try:
+    map_levels=float(map_levels)
+    map_level_list=[map_levels]*n_densities
+    # 设置一个flag，标记阈值相同
+    same_map_levels=True
+    map_level = map_levels
+except ValueError:
+    with open(map_levels,"r") as f:
+        map_levels_dict=json.load(f)
+    map_level_list=[]
+    for density_name in density_names:
+        map_level_list.append(map_levels_dict[density_name])
+    same_map_levels=False
 
 states_of_densities=[]
 state_to_id_of_densities=[]
@@ -60,9 +81,10 @@ for density_name in density_names:
 crosslinked_residues_graph=nx.Graph()
 crosslink_list=[]
 for crosslink_file in crosslink_files:
+    # 不考虑单个残基的自交联
     crosslink_list+=[item for item in np.loadtxt(crosslink_file,dtype=str,ndmin=2) if len(set(item))==2]
 crosslinked_residues_graph.add_edges_from(crosslink_list)
-print("number of unique crosslinks in files:",crosslinked_residues_graph.number_of_edges())
+# print("number of unique crosslinks in files:",crosslinked_residues_graph.number_of_edges())
 
 def is_residueId_in_selection(residueId,selection):
     for item in selection.split(','):
@@ -124,7 +146,46 @@ for uniprot_id in protein_to_crosslinked_residues_to_domains.keys():
     protein_to_domain_to_crosslink_residues[uniprot_id]=domain_to_crosslink_residues
 
 
+# 将密度用编号表示为网络
+Density_adj_graph=nx.Graph()
+# 添加初始单元的密度
+density_id_to_copy_ids={}
+for density_id in range(n_densities):
+    Density_adj_graph.add_node(f"{density_id}.0")
+    density_id_to_copy_ids[density_id]=[0]
 
+# 对称性json的格式为
+# [
+#     # 对称性变换1
+#     {
+#       "rotation_axis": [rx,ry,rz],
+#       "rotation_point": [x,y,z],
+#       "rotation_degrees": degrees,
+#       "translation": [tx,ty,tz]
+#       "densities": density_list  # 应用次变换的密度名称列表
+#       },
+#     # 对称性变换2
+#     {},
+#     ...
+# ]
+
+# 如果存在对称性变换文件
+if symmetry_transform_file == "None":
+    symmetry_transform_list=[]
+else:
+    # 读取对称性json文件
+    import json
+    with open(symmetry_transform_file,"r") as f:
+        symmetry_transform_list=json.load(f)
+
+# 遍历所有对称性变换
+# 每一个对称性变换对应着初始单元的一个copy
+for copy_id in range(1,len(symmetry_transform_list)+1):
+    for density in symmetry_transform_list[copy_id-1]["densities"]:
+        density_id=density_name_to_index[density]
+        # 添加节点到Density_adj_graph中
+        Density_adj_graph.add_node(f"{density_id}.{copy_id}")
+        density_id_to_copy_ids[density_id].append(copy_id)
 
 # 判断两个mrc密度是否相邻
 
@@ -151,9 +212,65 @@ def get_cg_data(data, lengths, grid_shape, voxel, map_level=0, cg_voxel=10):
                     data_cg[cg_index[0],cg_index[1],cg_index[2]]+=1
     return data_cg, cg_voxel
 
-def is_adjacent(mrc_path1, mrc_path2, map_level_1, map_level_2,cg_voxel=10,min_ratio=0.1, max_dist=60):
-    data1, origin1, lengths1, grid_shape1, voxel1 = get_mrc_data_and_params(mrc_path1)
-    data2, origin2, lengths2, grid_shape2, voxel2 = get_mrc_data_and_params(mrc_path2)
+# 对称性变换
+# 旋转
+def rotate_points(points, axis, center, angle_deg):
+    points=np.array(points)
+    input_shape = points.shape
+    points=points.reshape((-1,3))
+    # 确保axis是单位向量
+    axis=np.array(axis/np.linalg.norm(axis))
+    center=np.array(center)
+    # 将角度转换为弧度  
+    angle_rad = np.deg2rad(angle_deg)
+    # 创建旋转对象（使用旋转向量：axis * angle_rad）
+    rotation = Rotation.from_rotvec(axis*angle_rad)
+    # 平移点到中心点坐标系  
+    translated_points=points - center
+    # 应用旋转  
+    rotated_points=rotation.apply(translated_points)
+    # 平移回原坐标系  
+    transformed_points=rotated_points + center
+    # 转换回输入shpae
+    transformed_points=transformed_points.reshape(input_shape)
+    return transformed_points
+
+# 平移
+def translate_points(points, translation):
+    points=np.array(points)
+    input_shape = points.shape
+    points=points.reshape((-1,3))
+    translation=np.array(translation)
+    translated_points=points+translation
+    translated_points=translated_points.reshape(input_shape)
+    return translated_points
+
+# 对称性变换
+def apply_symmetric_transform(points,copy_id):
+    axis = np.array(symmetry_transform_list[copy_id-1]["rotation_axis"],dtype=np.float32)
+    center = np.array(symmetry_transform_list[copy_id-1]["rotation_point"],dtype=np.float32)
+    angle_deg = float(symmetry_transform_list[copy_id-1]["rotation_degrees"])
+    translation = np.array(symmetry_transform_list[copy_id-1]["translation"],dtype=np.float32)
+    # 如果axis非空
+    if len(axis)>0:
+        rotated_points = rotate_points(points, axis, center, angle_deg)
+    else:
+        rotated_points = points
+    # 如果translation非空
+    if len(translation)>0:
+        transformed_points = translate_points(rotated_points, translation)
+    else:
+        transformed_points = rotated_points
+    return transformed_points
+
+# 判断两密度是否相邻
+def is_adjacent(density_id_1, copy_id_1, density_id_2, copy_id_2, map_level_1, map_level_2,cg_voxel=10,min_ratio=0.1, max_dist=60):
+    density_1=density_names[density_id_1]
+    density_2=density_names[density_id_2]
+    density_1_path=os.path.join(map_dir,density_1+".mrc")
+    density_2_path=os.path.join(map_dir,density_2+".mrc")
+    data1, origin1, lengths1, grid_shape1, voxel1 = get_mrc_data_and_params(density_1_path)
+    data2, origin2, lengths2, grid_shape2, voxel2 = get_mrc_data_and_params(density_2_path)
     cg_data1, cg_voxel1=get_cg_data(data1, lengths1, grid_shape1, voxel1, map_level_1, cg_voxel)
     cg_data2, cg_voxel2=get_cg_data(data2, lengths2, grid_shape2, voxel2, map_level_2, cg_voxel)
     # 所有超过一定ratio的cg格点的id
@@ -162,24 +279,49 @@ def is_adjacent(mrc_path1, mrc_path2, map_level_1, map_level_2,cg_voxel=10,min_r
     # 坐标
     cg_coords1=(0.5+cg_ids1)*cg_voxel1+origin1
     cg_coords2=(0.5+cg_ids2)*cg_voxel2+origin2
+    # 应用对称性变换
+    if copy_id_1 != 0:
+        cg_coords1=apply_symmetric_transform(cg_coords1,copy_id_1)
+    if copy_id_2 != 0:
+        cg_coords2=apply_symmetric_transform(cg_coords2,copy_id_2)
     # 计算距离矩阵
     dist_matrix=cdist(cg_coords1,cg_coords2)
     # 最小距离是否小于阈值
     min_dist=np.min(dist_matrix)
     return min_dist<max_dist
 
-# 将密度用编号表示为网络
-Density_adj_graph=nx.Graph()
-# 遍历两两密度，判断是否相邻
-for density_id_1 in range(0,n_densities-1):
-    for density_id_2 in range(density_id_1+1,n_densities):
-        density_1=density_names[density_id_1]
-        density_2=density_names[density_id_2]
-        density_1_path=os.path.join(map_dir,density_1+".mrc")
-        density_2_path=os.path.join(map_dir,density_2+".mrc")
-        if is_adjacent(density_1_path,density_2_path,map_level,map_level):
-            Density_adj_graph.add_edge(str(density_id_1),str(density_id_2))
+# 遍历所有至少有一个密度属于初始单元（copy_id=0）的密度对，判断是否相邻
+for density_id_1 in range(0,n_densities):
+    map_level_1 = map_level_list[density_id_1]
+    # 让density_id_1始终取copy_id=0的密度
+    copy_id_1=0
+    Density_node_1=f"{density_id_1}.{copy_id_1}"
+    for density_id_2 in range(n_densities):
+        map_level_2 = map_level_list[density_id_2]
+        for copy_id_2 in density_id_to_copy_ids[density_id_2]:
+            Density_node_2=f"{density_id_2}.{copy_id_2}"
+            # 跳过自身
+            if Density_node_1 == Density_node_2:
+                continue
+            # 跳过已经验证相邻的密度对
+            if Density_adj_graph.has_edge(Density_node_1,Density_node_2):
+                continue
+            if is_adjacent(density_id_1,copy_id_1,density_id_2,copy_id_2,map_level_1,map_level_2):
+                Density_adj_graph.add_edge(Density_node_1,Density_node_2)
 
+# 遍历所有非0copy
+for density_id in range(n_densities):
+    for copy_id in density_id_to_copy_ids[density_id][1:]:
+        Density_node=f"{density_id}.{copy_id}"
+        # 如果该节点没有和任何copy_id=0的节点相邻，则删除该节点
+        delete_flag = True
+        for density_id_ref in range(n_densities):
+            Density_node_ref=f"{density_id_ref}.0"
+            if Density_adj_graph.has_edge(Density_node_ref,Density_node):
+                delete_flag = False
+                break
+        if delete_flag:
+            Density_adj_graph.remove_node(Density_node)
 
 # fit变换
 def get_transformation_matrix_list(fit_log_path):
@@ -207,11 +349,8 @@ def get_multiplier(distance,mu,sigma,evidence_strength):
     return evidence_strength*lognormal_pdf(distance,mu,sigma)
 
 
-
-
-
 # 预先读取并计算每个密度中所有交联相关残基的位置，减少后续重复读取文件
-# 暂时未考虑对称性
+# 先处理基础copy=0的密度
 fitted_positions_of_crosslink_related_residues_in_Densities = {Density:{} for Density in Density_adj_graph.nodes}
 for density_id in range(len(density_names)):
     for cl, data in crosslink_related_domains_dict.items():
@@ -232,9 +371,17 @@ for density_id in range(len(density_names)):
                             domain_ids_and_fit_ids.append([str(domain_id), fit_id])
                             fitted_positions.append(fitted_position)
         if fitted_positions:
-            fitted_positions_of_crosslink_related_residues_in_Densities[str(density_id)][cl]=[domain_ids_and_fit_ids,np.array(fitted_positions)]
-
-
+            fitted_positions_of_crosslink_related_residues_in_Densities[str(density_id)+".0"][cl]=[domain_ids_and_fit_ids,np.array(fitted_positions)]
+# 处理其他copy的密度
+for density_id in range(n_densities):
+    for copy_id in density_id_to_copy_ids[density_id][1:]:
+        Density_node=f"{density_id}.{copy_id}"
+        fitted_positions_of_crosslink_related_residues={}
+        for cl, data in fitted_positions_of_crosslink_related_residues_in_Densities[str(density_id)+".0"].items():
+            domain_ids_and_fit_ids=data[0]
+            fitted_positions = apply_symmetric_transform(data[1],copy_id)
+            fitted_positions_of_crosslink_related_residues[cl]=[domain_ids_and_fit_ids,fitted_positions]
+        fitted_positions_of_crosslink_related_residues_in_Densities[Density_node]=fitted_positions_of_crosslink_related_residues
 
 
 
@@ -254,8 +401,8 @@ crosslinks_di={tuple([str(row[0]),str(row[1])])
 for Density_1,Density_2 in Density_adj_graph.edges:
     crosslink_related_residues_1=fitted_positions_of_crosslink_related_residues_in_Densities[Density_1].keys()
     crosslink_related_residues_2=fitted_positions_of_crosslink_related_residues_in_Densities[Density_2].keys()
-    density_id_1 = int(Density_1)
-    density_id_2 = int(Density_2)
+    density_id_1, copy_id_1 = [int(item) for item in Density_1.split(".")]
+    density_id_2, copy_id_2 = [int(item) for item in Density_2.split(".")]
     for cl_1,cl_2 in crosslinks_di:
         if cl_1 in crosslink_related_residues_1 and cl_2 in crosslink_related_residues_2:
             protein_id_1, residue_id_1 = cl_1.split(':')
@@ -285,6 +432,10 @@ for Density_1,Density_2 in Density_adj_graph.edges:
                 state_2=f"{protein_id_2}_{domain_id_2}_{fit_id_2}"
                 state_id_2=state_to_id_of_densities[density_id_2][state_2]
                 prior_probability_2=prior_probabilities_of_densities[density_id_2][state_id_2-1]
+
+                # 如果density_id_1==density_id_2，则要求state_id_1==state_id_2
+                if density_id_1==density_id_2 and state_id_1!=state_id_2:
+                    continue
 
                 # 至少有一个能作为供体
                 if prior_probability_1<donor_prior_probability_cutoff and prior_probability_2<donor_prior_probability_cutoff:
@@ -346,18 +497,27 @@ for node_1,node_2 in crosslink_compliant_density_states_graph.edges:
 
 
 # 保存符合交联约束的残基对
+# 仅用于展示结果
 compliant_crosslinks = {} # density_1 : state_1 : [[density_2, state_2, residue_id_1, residue_id_2],... ]
 for node_1, node_2 in crosslink_compliant_Density_states_graph.edges:
     Density_id_1, state_id_1 = node_1.split(':')
-    density_id_1 = int(Density_id_1)
+    density_id_1, copy_id_1 = Density_id_1.split('.')
+    density_id_1 = int(density_id_1)
+    copy_id_1 = int(copy_id_1)
     state_id_1 = int(state_id_1)
     Density_id_2, state_id_2 = node_2.split(':')
-    density_id_2 = int(Density_id_2)
+    density_id_2, copy_id_2 = Density_id_2.split('.')
+    density_id_2 = int(density_id_2)
+    copy_id_2 = int(copy_id_2)
     state_id_2 = int(state_id_2)
-    if density_id_1 > density_id_2:
+    # 因为前面已排除相邻两密度的copy_id同时大于0的情况，
+    # 这里保证copy_id_1 == 0，否则交换
+    # 如果copy_id_1 > 0，交换
+    if copy_id_1 > 0:
         node_1, node_2 = node_2, node_1
         density_id_1, density_id_2 = density_id_2, density_id_1
         state_id_1, state_id_2 = state_id_2, state_id_1
+        copy_id_1, copy_id_2 = copy_id_2, copy_id_1
     density_1 = density_names[density_id_1]
     if compliant_crosslinks.get(density_1) is None:
         compliant_crosslinks[density_1] = {}
@@ -369,9 +529,14 @@ for node_1, node_2 in crosslink_compliant_Density_states_graph.edges:
         residue_id_2 = int(data['crosslinked_residues'][node_2].split(":")[-1])
         if compliant_crosslinks[density_1].get(state_1) is None:
             compliant_crosslinks[density_1][state_1] = []
-        compliant_crosslinks[density_1][state_1].append([density_2, state_2 ,residue_id_1, residue_id_2])
+        # 如果copy_id_2 > 0，额外记录copy_id_2
+        if copy_id_2 > 0:
+            compliant_crosslinks[density_1][state_1].append([density_2, state_2 ,residue_id_1, residue_id_2, copy_id_2])
+        else:
+            compliant_crosslinks[density_1][state_1].append([density_2, state_2, residue_id_1, residue_id_2])
+# 额外添加一个键"apply_symmetry_transform"
+compliant_crosslinks["apply_symmetry_transform"] = symmetry_transform_list
 np.save(os.path.join(project_dir,"compliant_crosslinks.npy"), compliant_crosslinks)
-
 
 
 
@@ -752,7 +917,12 @@ with open(posterior_config_path,"w") as f:
     f.write(f"crosslink_files:\n")
     for crosslink_file in crosslink_files:
         f.write(f"\t{crosslink_file}\n")
-    f.write(f"threshold={map_level}\n")
+    if same_map_levels:
+        f.write(f"threshold={map_level}\n")
+    else:
+        f.write(f"thresholds:\n")
+        for i in range(len(map_level_list)):
+            f.write(f"\t{density_names[i]}:{map_level_list[i]}\n")
     f.write(f"acceptor_cutoff={acceptor_prior_probability_cutoff}\n")
     f.write(f"donor_cutoff={donor_prior_probability_cutoff}\n")
     f.write(f"evidence_strength={evidence_strength}\n")

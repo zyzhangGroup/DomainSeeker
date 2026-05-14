@@ -10,6 +10,7 @@ import scipy
 import mrcfile
 from tqdm import tqdm
 import warnings
+import json
 
 script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
@@ -28,7 +29,7 @@ else:
     ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
 
 def fit(params):
-    domain_filename, ref_map_filename = params
+    domain_filename, ref_map_filename, ref_map_threshold, resolution = params
     domain_path=os.path.join(domain_dir,domain_filename).replace("\\","/")
     map_path=os.path.join(map_dir,ref_map_filename).replace("\\","/")
     output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
@@ -40,8 +41,10 @@ def fit(params):
 domain_dir=os.path.realpath(sys.argv[2]).replace("\\","/")
 map_dir=os.path.realpath(sys.argv[3]).replace("\\","/")
 fitout_dir=os.path.realpath(sys.argv[4]).replace("\\","/")
-ref_map_threshold=float(sys.argv[5])
-resolution=float(sys.argv[6])
+
+ref_map_thresholds=sys.argv[5]
+resolutions=sys.argv[6]
+
 n_search=int(sys.argv[7])
 
 negtive_laplacian_cutoff=float(sys.argv[8])
@@ -125,7 +128,7 @@ def transform_positions(xyzs,transformation_matrix):
     translation_vector=transformation_matrix[:,-1]
     return xyzs.dot(rotation_matrix.T)+translation_vector
 
-def get_fit_map_mat(u,transformation_matrix,density_param_dict):
+def get_fit_map_mat(u,transformation_matrix,resolution,density_param_dict):
     grid_shape=density_param_dict['grid_shape']
     origin=density_param_dict['origin']
     lengths=density_param_dict['lengths']
@@ -144,8 +147,8 @@ def get_fit_map_mat(u,transformation_matrix,density_param_dict):
     data=scipy.ndimage.convolve(data,get_gaussian_kernel(resolution,voxel),mode='constant')
     return data
 
-def get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,density_param_dict):
-    fit_map_mat=get_fit_map_mat(u,transformation_matrix,density_param_dict)
+def get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,resolution,density_param_dict):
+    fit_map_mat=get_fit_map_mat(u,transformation_matrix,resolution,density_param_dict)
     fit_map_mat_laplacian=scipy.ndimage.convolve(fit_map_mat,laplacian_kernel,mode='constant')
     sel=(ref_map_mat_laplacian<negtive_laplacian_cutoff)*(fit_map_mat_laplacian<fit_map_laplacian_cutoff_low)
     sel_ref=(ref_map_mat_laplacian<negtive_laplacian_cutoff)+(ref_map_mat_laplacian>positive_laplacian_cutoff)
@@ -162,7 +165,8 @@ def score(parms):
     density=parms[0]
     ref_map_mat_laplacian=parms[1]
     log=parms[2]
-    density_param_dict=parms[3]
+    resolution=parms[3]
+    density_param_dict=parms[4]
     domain_name=log[:-4]
     domain_path=os.path.join(domain_dir,domain_name+'.pdb')
     with warnings.catch_warnings():
@@ -173,7 +177,7 @@ def score(parms):
     transformation_matrix_list=get_transformation_matrix_list(log_path)
     score_list=[]
     for transformation_matrix in transformation_matrix_list:
-        score_list.append(get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,density_param_dict))
+        score_list.append(get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,resolution,density_param_dict))
     return [log[:-4],score_list]
 
 
@@ -181,9 +185,50 @@ if __name__=="__main__":
     os.makedirs(fitout_dir,exist_ok=True)
 
     map_list=[file_name for file_name in os.listdir(map_dir) if file_name.endswith(".mrc")]
+
+    # 处理ref_map_thresholds参数
+    # 如果该参数能转换为float，则由该值拓展成列表
+    try:
+        ref_map_threshold=float(ref_map_thresholds)
+        ref_map_threshold_list=[ref_map_threshold]*len(map_list)
+    # 否则读取该配置文件，预期是json格式的字典
+    except ValueError:
+        with open(ref_map_thresholds) as f:
+            ref_map_threshold_dict=json.load(f)
+        ref_map_threshold_list=[]
+        for map_name in map_list:
+            # 去掉末尾的.mrc
+            density = map_name[:-4]
+            if density in ref_map_threshold_dict.keys():
+                ref_map_threshold_list.append(ref_map_threshold_dict[density])
+            else:
+                ref_map_threshold_list.append(0.0)
+
+    # 处理resolutions参数
+    # 如果该参数能转换为float，则由该值拓展成列表
+    try:
+        resolution=float(resolutions)
+        resolution_list=[resolution]*len(map_list)
+    # 否则读取该配置文件，预期是json格式的字典
+    except ValueError:
+        with open(resolutions) as f:
+            resolution_dict=json.load(f)
+        resolution_list=[]
+        for map_name in map_list:
+            # 去掉末尾的.mrc
+            density = map_name[:-4]
+            if density in resolution_dict.keys():
+                resolution_list.append(resolution_dict[density])
+            else:
+                # 报错，KeyError，未找到该密度的分辨率（英文）
+                raise KeyError(f"Cannot find resolution for density {density}")
+
+
     domain_list=[file_name for file_name in os.listdir(domain_dir) if file_name.endswith(".pdb")]
 
     for i, ref_map_filename in enumerate(map_list):
+        ref_map_threshold=ref_map_threshold_list[i]
+        resolution=resolution_list[i]
         # fit
         output_subdir=os.path.join(fitout_dir,ref_map_filename).replace("\\","/")
         os.makedirs(output_subdir,exist_ok=True)
@@ -200,7 +245,7 @@ if __name__=="__main__":
                          f"{n_process=}")
         config_log.close()
 
-        params_list=[(domain_filename,ref_map_filename) for domain_filename in domain_list]
+        params_list=[(domain_filename,ref_map_filename,ref_map_threshold,resolution) for domain_filename in domain_list]
 
         with multiprocessing.Pool(n_process) as pool:
             # 强制迭代tqdm对象，更新进度条
@@ -214,7 +259,7 @@ if __name__=="__main__":
 
         log_list=[log for log in os.listdir(fitlog_subdir) if log.endswith('.log')]
 
-        pool_params=[(ref_map_filename,ref_map_mat_laplacian,log,density_param_dict) for log in log_list]
+        pool_params=[(ref_map_filename,ref_map_mat_laplacian,log,resolution,density_param_dict) for log in log_list]
 
         pool=multiprocessing.Pool(n_process)
         scores=list(tqdm(pool.imap_unordered(score,pool_params),total=len(log_list),desc=f"{i+1}/{len(map_list)}--Locally scoring {ref_map_filename}",file=sys.stdout)) #1.将结果存入列表。2.list强制迭代tqdm对象，更新进度条

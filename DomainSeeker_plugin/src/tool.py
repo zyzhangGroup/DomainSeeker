@@ -92,452 +92,293 @@ class DomainSeeker(ToolInstance):
 
     # 创建计算标签页
     def _create_computation_tab(self):
-        # Create a new QWidget to hold our widgets
         calculation_tab = QWidget()
         calculation_tab_base_layout = QVBoxLayout(calculation_tab)
 
-        # 创建滚动区域
-        computation_scroll_area = QScrollArea()
-        computation_scroll_area.setObjectName("computation_scroll_area")
-        computation_scroll_area.setWidgetResizable(True)
-        # 添加到计算标签页布局
-        calculation_tab_base_layout.addWidget(computation_scroll_area)
+        scroll, calculation_layout = self._create_scroll_area("computation_scroll_area")
+        calculation_tab_base_layout.addWidget(scroll)
 
-        # 创建滚动区域容器
-        computation_scroll_area_container = QWidget()
-        computation_scroll_area_container.setObjectName("result_scroll_area_container")
-        # 垂直方向尽可能大
-        computation_scroll_area_container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        computation_scroll_area.setWidget(computation_scroll_area_container)
+        calculation_layout.addLayout(self._create_global_options_section())
+        calculation_layout.addWidget(self.create_horizontal_line())
+        calculation_layout.addLayout(self._create_file_fetching_section())
+        calculation_layout.addWidget(self.create_horizontal_line())
+        calculation_layout.addLayout(self._create_domain_parsing_section())
+        calculation_layout.addWidget(self.create_horizontal_line())
+        calculation_layout.addLayout(self._create_fitting_scoring_section())
+        calculation_layout.addWidget(self.create_horizontal_line())
+        calculation_layout.addLayout(self._create_prior_probability_section())
+        calculation_layout.addWidget(self.create_horizontal_line())
+        calculation_layout.addLayout(self._create_posterior_probability_section())
+        calculation_layout.addWidget(self.create_horizontal_line(thickness=4))
+        calculation_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        # 创建网格布局，并添加到滚动区域容器
-        calculation_layout = QVBoxLayout(computation_scroll_area_container)
+        return calculation_tab
 
-        global_options_layout = QVBoxLayout()
-        file_fetching_layout = QVBoxLayout()
-        domain_parsing_layout = QVBoxLayout()
-        fitting_scoring_layout = QVBoxLayout()
-        prior_probability_layout = QVBoxLayout()
-        posterior_probability_layout = QVBoxLayout()
-
-        # --------------------------------------------------------------------------------------------------------
-
-        # Global options layout
-
-        global_options_head = QLabel("Global options")
-
-        global_options_layout.addWidget(global_options_head)
-
-        global_options_body = QGridLayout()
-
-        # Project directory
-        global_options_body.addWidget(QLabel("Project directory:"), 0, 0)
+    def _create_global_options_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Global options"))
+        body = QGridLayout()
 
         self.project_directory_text = QLineEdit()
-        # 禁止输入，只能通过按钮选择，因为需要初始化一些信息
-        self.project_directory_text.setReadOnly(True)
-        global_options_body.addWidget(self.project_directory_text, 0, 1)
-
-        project_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(project_directory_select_button, 0, 2)
-        project_directory_select_button.clicked.connect(lambda: self._initialize_project(self.project_directory_text))
-
-        # Map directory
-        global_options_body.addWidget(QLabel("Map directory:"), 1, 0)
+        self._add_directory_row(body, 0, "Project directory:",
+                                self.project_directory_text, read_only=True,
+                                callback=lambda: self._initialize_project(self.project_directory_text))
 
         self.map_directory_text = QLineEdit()
-        global_options_body.addWidget(self.map_directory_text, 1, 1)
-
-        map_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(map_directory_select_button, 1, 2)
-        map_directory_select_button.clicked.connect(lambda: self._select_directory(self.map_directory_text,
-                                                                                   self.project_directory_text.text()))
-        
-        # Pdb directory
-        global_options_body.addWidget(QLabel("Pdb directory:"), 2, 0)
+        self._add_directory_row(body, 1, "Map directory:", self.map_directory_text,
+                                callback=lambda: self._select_directory(
+                                    self.map_directory_text, self.project_directory_text.text()))
 
         self.pdb_directory_text = QLineEdit()
-        global_options_body.addWidget(self.pdb_directory_text, 2, 1)
+        self._add_directory_row(body, 2, "Pdb directory:", self.pdb_directory_text,
+                                callback=lambda: self._select_directory(
+                                    self.pdb_directory_text, self.project_directory_text.text()))
 
-        pdb_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(pdb_directory_select_button, 2, 2)
-        pdb_directory_select_button.clicked.connect(lambda: self._select_directory(self.pdb_directory_text,
-                                                                                   self.project_directory_text.text()))
-        
-        # Pae directory
-        global_options_body.addWidget(QLabel("Pae directory:"), 3, 0)
-
-        self.pae_directory_text = QLineEdit()        
-        global_options_body.addWidget(self.pae_directory_text, 3, 1)
-
-        pae_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(pae_directory_select_button, 3, 2)
-        pae_directory_select_button.clicked.connect(lambda: self._select_directory(self.pae_directory_text,
-                                                                                   self.project_directory_text.text()))
-        
-        
-        # Domain directory
-        global_options_body.addWidget(QLabel("Domain directory:"), 4, 0)
+        self.pae_directory_text = QLineEdit()
+        self._add_directory_row(body, 3, "Pae directory:", self.pae_directory_text,
+                                callback=lambda: self._select_directory(
+                                    self.pae_directory_text, self.project_directory_text.text()))
 
         self.domain_directory_text = QLineEdit()
-        global_options_body.addWidget(self.domain_directory_text, 4, 1)
-
-        domain_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(domain_directory_select_button, 4, 2)
-        domain_directory_select_button.clicked.connect(lambda: self._select_directory(self.domain_directory_text,
-                                                                                      self.project_directory_text.text()))
-        
-        # Fitout directory
-        global_options_body.addWidget(QLabel("Fitout directory:"), 5, 0)
+        self._add_directory_row(body, 4, "Domain directory:", self.domain_directory_text,
+                                callback=lambda: self._select_directory(
+                                    self.domain_directory_text, self.project_directory_text.text()))
 
         self.fitout_directory_text = QLineEdit()
-        global_options_body.addWidget(self.fitout_directory_text, 5, 1)
+        self._add_directory_row(body, 5, "Fitout directory:", self.fitout_directory_text,
+                                callback=lambda: self._select_directory(
+                                    self.fitout_directory_text, self.project_directory_text.text()))
 
-        fitout_directory_select_button = QPushButton("Select Directory")
-        global_options_body.addWidget(fitout_directory_select_button, 5, 2)
-        fitout_directory_select_button.clicked.connect(lambda: self._select_directory(self.fitout_directory_text,
-                                                                                      self.project_directory_text.text()))
-        
-        global_options_layout.addLayout(global_options_body)
+        layout.addLayout(body)
+        return layout
 
-        # --------------------------------------------------------------------------------------------------------
-
-        # File fetching layout
-
-        file_fetching_head = QLabel("Fetch pdb and pae files from AFDB")
-
-        file_fetching_layout.addWidget(file_fetching_head)
-
-
-        file_fetching_body = QHBoxLayout()
-
-        file_fetching_body.addWidget(QLabel("Fetch proteins in file:"))
+    def _create_file_fetching_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Fetch pdb and pae files from AFDB"))
+        body = QHBoxLayout()
+        body.addWidget(QLabel("Fetch proteins in file:"))
 
         protein_list_file_path_text = QLineEdit()
-        file_fetching_body.addWidget(protein_list_file_path_text)
+        body.addWidget(protein_list_file_path_text)
 
-        protein_list_file_select_button = QPushButton("Select File")
-        file_fetching_body.addWidget(protein_list_file_select_button)
-        protein_list_file_select_button.clicked.connect(lambda: self._select_file(protein_list_file_path_text, 
-                                                                                  self.project_directory_text.text()))
+        select_btn = QPushButton("Select File")
+        body.addWidget(select_btn)
+        select_btn.clicked.connect(lambda: self._select_file(
+            protein_list_file_path_text, self.project_directory_text.text()))
 
-        fetch_file_button = QPushButton("Fetch files")
-        file_fetching_body.addWidget(fetch_file_button)
-        fetch_file_button.clicked.connect(lambda: self._fetch_pdb_and_pae_files(protein_list_file_path_text.text(), 
-                                                                                self.project_directory_text.text(),
-                                                                                self.pdb_directory_text.text(),
-                                                                                self.pae_directory_text.text()))
-        file_fetching_layout.addLayout(file_fetching_body)
+        fetch_btn = QPushButton("Fetch files")
+        body.addWidget(fetch_btn)
+        fetch_btn.clicked.connect(lambda: self._fetch_pdb_and_pae_files(
+            protein_list_file_path_text.text(), self.project_directory_text.text(),
+            self.pdb_directory_text.text(), self.pae_directory_text.text()))
+        layout.addLayout(body)
+        return layout
 
-        # --------------------------------------------------------------------------------------------------------
+    def _create_domain_parsing_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Parse proteins into domains based on PAE"))
+        body = QGridLayout()
 
-        # Domain parsing layout
-
-        domain_parsing_head = QLabel("Parse proteins into domains based on PAE")
-
-        domain_parsing_layout.addWidget(domain_parsing_head)
-
-
-        domain_parsing_body = QGridLayout()
-
-        # plddt_cutoff
-        domain_parsing_body.addWidget(QLabel("plddt_cutoff"), 0, 0)
         plddt_cutoff_text = QLineEdit()
         plddt_cutoff_text.setText("70")
-        domain_parsing_body.addWidget(plddt_cutoff_text, 1, 0)
+        body.addWidget(QLabel("plddt_cutoff"), 0, 0)
+        body.addWidget(plddt_cutoff_text, 1, 0)
 
-        # pae_cutoff
-        domain_parsing_body.addWidget(QLabel("pae_cutoff"), 0, 1)
         pae_cutoff_text = QLineEdit()
         pae_cutoff_text.setText("5")
-        domain_parsing_body.addWidget(pae_cutoff_text, 1, 1)
+        body.addWidget(QLabel("pae_cutoff"), 0, 1)
+        body.addWidget(pae_cutoff_text, 1, 1)
 
-        # clique_cutoff
-        domain_parsing_body.addWidget(QLabel("clique_cutoff"), 0, 2)
         clique_cutoff_text = QLineEdit()
         clique_cutoff_text.setText("4")
-        domain_parsing_body.addWidget(clique_cutoff_text, 1, 2)
+        body.addWidget(QLabel("clique_cutoff"), 0, 2)
+        body.addWidget(clique_cutoff_text, 1, 2)
 
-        # min_dege_ratio
-        domain_parsing_body.addWidget(QLabel("min_dege_ratio"), 2, 0)
         min_dege_ratio_text = QLineEdit()
         min_dege_ratio_text.setText("0.6")
-        domain_parsing_body.addWidget(min_dege_ratio_text, 3, 0)
+        body.addWidget(QLabel("min_dege_ratio"), 2, 0)
+        body.addWidget(min_dege_ratio_text, 3, 0)
 
-        # min_common_nodes_ratio
-        # 占据两列
-        domain_parsing_body.addWidget(QLabel("min_common_nodes_ratio"), 2, 1, 1, 2)
         min_common_nodes_ratio_text = QLineEdit()
         min_common_nodes_ratio_text.setText("0.5")
-        domain_parsing_body.addWidget(min_common_nodes_ratio_text, 3, 1, 1, 2)
+        body.addWidget(QLabel("min_common_nodes_ratio"), 2, 1, 1, 2)
+        body.addWidget(min_common_nodes_ratio_text, 3, 1, 1, 2)
 
-        # min_domain_size
-        domain_parsing_body.addWidget(QLabel("min_domain_size"), 2, 3)
         min_domain_size_text = QLineEdit()
         min_domain_size_text.setText("40")
-        domain_parsing_body.addWidget(min_domain_size_text, 3, 3)
+        body.addWidget(QLabel("min_domain_size"), 2, 3)
+        body.addWidget(min_domain_size_text, 3, 3)
 
-        # max_domain_size
-        domain_parsing_body.addWidget(QLabel("max_domain_size"), 2, 4)
         max_domain_size_text = QLineEdit()
         max_domain_size_text.setText("1000")
-        domain_parsing_body.addWidget(max_domain_size_text, 3, 4)
+        body.addWidget(QLabel("max_domain_size"), 2, 4)
+        body.addWidget(max_domain_size_text, 3, 4)
 
-        # n_process
-        domain_parsing_body.addWidget(QLabel("n_process"), 0, 3)
-        domain_parsing_n_process_text = QLineEdit()
-        domain_parsing_n_process_text.setText("1")
-        domain_parsing_body.addWidget(domain_parsing_n_process_text, 1, 3)
+        n_process_text = QLineEdit()
+        n_process_text.setText("1")
+        body.addWidget(QLabel("n_process"), 0, 3)
+        body.addWidget(n_process_text, 1, 3)
 
-        # Submit button
-        domain_parsing_button = QPushButton("Parse domains")
-        domain_parsing_body.addWidget(domain_parsing_button,1,4)
-        domain_parsing_button.clicked.connect(lambda: self._parse_domains(self.project_directory_text.text(),
-                                                                          self.pdb_directory_text.text(),
-                                                                          self.pae_directory_text.text(),
-                                                                          self.domain_directory_text.text(),
-                                                                          plddt_cutoff_text.text(),
-                                                                          pae_cutoff_text.text(),
-                                                                          clique_cutoff_text.text(),
-                                                                          min_dege_ratio_text.text(),
-                                                                          min_common_nodes_ratio_text.text(),
-                                                                          min_domain_size_text.text(),
-                                                                          max_domain_size_text.text(),
-                                                                          domain_parsing_n_process_text.text()))
+        button = QPushButton("Parse domains")
+        body.addWidget(button, 1, 4)
+        button.clicked.connect(lambda: self._parse_domains(
+            self.project_directory_text.text(), self.pdb_directory_text.text(),
+            self.pae_directory_text.text(), self.domain_directory_text.text(),
+            plddt_cutoff_text.text(), pae_cutoff_text.text(), clique_cutoff_text.text(),
+            min_dege_ratio_text.text(), min_common_nodes_ratio_text.text(),
+            min_domain_size_text.text(), max_domain_size_text.text(),
+            n_process_text.text()))
+        layout.addLayout(body)
+        return layout
 
-        domain_parsing_layout.addLayout(domain_parsing_body)
+    def _create_fitting_scoring_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Fit domains into densities and score fitted domains"))
+        body = QGridLayout()
 
-        # --------------------------------------------------------------------------------------------------------
-
-        # Fitting and scoring layout
-
-        fitting_scoring_head = QLabel("Fit domains into densities and score fitted domains")
-        fitting_scoring_layout.addWidget(fitting_scoring_head)
-
-        fitting_scoring_body = QGridLayout()
-
-        # threshold
-        fitting_scoring_body.addWidget(QLabel("threshold"), 0, 0)
         threshold_text = QLineEdit()
         threshold_text.setText("0.0")
-        fitting_scoring_body.addWidget(threshold_text, 1, 0)
+        body.addWidget(QLabel("threshold"), 0, 0)
+        body.addWidget(threshold_text, 1, 0)
 
-        # resolution
-        fitting_scoring_body.addWidget(QLabel("resolution"), 0, 1)
         resolution_text = QLineEdit()
         resolution_text.setText("6.0")
-        fitting_scoring_body.addWidget(resolution_text, 1, 1)
+        body.addWidget(QLabel("resolution"), 0, 1)
+        body.addWidget(resolution_text, 1, 1)
 
-        # n_search
-        fitting_scoring_body.addWidget(QLabel("n_search"), 0, 2)
         n_search_text = QLineEdit()
         n_search_text.setText("200")
-        fitting_scoring_body.addWidget(n_search_text, 1, 2)
+        body.addWidget(QLabel("n_search"), 0, 2)
+        body.addWidget(n_search_text, 1, 2)
 
-        # n_process
-        fitting_scoring_body.addWidget(QLabel("n_process"), 0, 3)
-        fitting_n_process_text = QLineEdit()
-        fitting_n_process_text.setText("1")
-        fitting_scoring_body.addWidget(fitting_n_process_text, 1, 3)
+        n_process_text = QLineEdit()
+        n_process_text.setText("1")
+        body.addWidget(QLabel("n_process"), 0, 3)
+        body.addWidget(n_process_text, 1, 3)
 
-        # negtive_laplacian_cutoff
-        fitting_scoring_body.addWidget(QLabel("negtive_laplacian_cutoff"), 2, 0)
-        negtive_laplacian_cutoff_text = QLineEdit()
-        negtive_laplacian_cutoff_text.setText("-0.001")
-        fitting_scoring_body.addWidget(negtive_laplacian_cutoff_text, 3, 0)
+        neg_cutoff_text = QLineEdit()
+        neg_cutoff_text.setText("-0.001")
+        body.addWidget(QLabel("negtive_laplacian_cutoff"), 2, 0)
+        body.addWidget(neg_cutoff_text, 3, 0)
 
-        # positive_laplacian_cutoff
-        fitting_scoring_body.addWidget(QLabel("positive_laplacian_cutoff"), 2, 1)
-        positive_laplacian_cutoff_text = QLineEdit()
-        positive_laplacian_cutoff_text.setText("0.001")
-        fitting_scoring_body.addWidget(positive_laplacian_cutoff_text, 3, 1)
+        pos_cutoff_text = QLineEdit()
+        pos_cutoff_text.setText("0.001")
+        body.addWidget(QLabel("positive_laplacian_cutoff"), 2, 1)
+        body.addWidget(pos_cutoff_text, 3, 1)
 
+        button = QPushButton("Fit & score")
+        body.addWidget(button, 3, 3)
+        button.clicked.connect(lambda: self._fit_and_score(
+            self.project_directory_text.text(), self.map_directory_text.text(),
+            threshold_text.text(), resolution_text.text(), n_search_text.text(),
+            neg_cutoff_text.text(), pos_cutoff_text.text(), n_process_text.text(),
+            self.domain_directory_text.text(), self.fitout_directory_text.text()))
+        layout.addLayout(body)
+        return layout
 
-        # Submit button
-        fitting_scoring_button = QPushButton("Fit & score")
-        fitting_scoring_body.addWidget(fitting_scoring_button,3,3)
-        fitting_scoring_button.clicked.connect(lambda: self._fit_and_score(self.project_directory_text.text(),
-                                                                           self.map_directory_text.text(),
-                                                                           threshold_text.text(),
-                                                                           resolution_text.text(),
-                                                                           n_search_text.text(),
-                                                                           negtive_laplacian_cutoff_text.text(),
-                                                                           positive_laplacian_cutoff_text.text(),
-                                                                           fitting_n_process_text.text(),
-                                                                           self.domain_directory_text.text(),
-                                                                           self.fitout_directory_text.text()))
-        
-        fitting_scoring_layout.addLayout(fitting_scoring_body)
+    def _create_prior_probability_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Calculate prior probability of each fitted domain"))
+        body = QGridLayout()
 
-        # --------------------------------------------------------------------------------------------------------
-
-        # Prior probability layout
-
-        prior_probability_head = QLabel("Calculate prior probability of each fitted domain")
-        prior_probability_layout.addWidget(prior_probability_head)
-
-        prior_probability_body = QGridLayout()
-
-        # box_num
-        prior_probability_body.addWidget(QLabel("box_num"), 0, 0)
         box_num_text = QLineEdit()
         box_num_text.setText("10")
-        prior_probability_body.addWidget(box_num_text, 1, 0)
+        body.addWidget(QLabel("box_num"), 0, 0)
+        body.addWidget(box_num_text, 1, 0)
 
-        # min_data_per_box
-        prior_probability_body.addWidget(QLabel("min_data_per_box"), 0, 1)
         min_data_per_box_text = QLineEdit()
         min_data_per_box_text.setText("50")
-        prior_probability_body.addWidget(min_data_per_box_text, 1, 1)
+        body.addWidget(QLabel("min_data_per_box"), 0, 1)
+        body.addWidget(min_data_per_box_text, 1, 1)
 
-        # relative_density_cutoff
-        prior_probability_body.addWidget(QLabel("relative_density_cutoff"), 0, 2)
         relative_density_cutoff_text = QLineEdit()
         relative_density_cutoff_text.setText("0.01")
-        prior_probability_body.addWidget(relative_density_cutoff_text, 1, 2)
+        body.addWidget(QLabel("relative_density_cutoff"), 0, 2)
+        body.addWidget(relative_density_cutoff_text, 1, 2)
 
-        # zScore_offset
-        prior_probability_body.addWidget(QLabel("zScore_offset"), 2, 0)
         zScore_offset_text = QLineEdit()
         zScore_offset_text.setText("15")
-        prior_probability_body.addWidget(zScore_offset_text, 3, 0)
+        body.addWidget(QLabel("zScore_offset"), 2, 0)
+        body.addWidget(zScore_offset_text, 3, 0)
 
+        button = QPushButton("Calculate prior probability")
+        body.addWidget(button, 3, 3)
+        button.clicked.connect(lambda: self._calculate_prior_probability(
+            self.project_directory_text.text(), self.map_directory_text.text(),
+            self.fitout_directory_text.text(), box_num_text.text(),
+            min_data_per_box_text.text(), relative_density_cutoff_text.text(),
+            zScore_offset_text.text()))
+        layout.addLayout(body)
+        return layout
 
-        # Submit button
-        prior_probability_button = QPushButton("Calculate prior probability")
-        prior_probability_body.addWidget(prior_probability_button,3,3)
-        prior_probability_button.clicked.connect(lambda: self._calculate_prior_probability(self.project_directory_text.text(),
-                                                                                           self.map_directory_text.text(),
-                                                                                           self.fitout_directory_text.text(),
-                                                                                           box_num_text.text(),
-                                                                                           min_data_per_box_text.text(),
-                                                                                           relative_density_cutoff_text.text(),
-                                                                                           zScore_offset_text.text()))
+    def _create_posterior_probability_section(self):
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Integrate extra experimental data"))
+        body = QVBoxLayout()
 
-        prior_probability_layout.addLayout(prior_probability_body)
-
-        # --------------------------------------------------------------------------------------------------------
-
-        # Posterior probability layout
-
-        posterior_probability_head = QLabel("Integrate extra experimental data")
-
-        posterior_probability_layout.addWidget(posterior_probability_head)
-
-        posterior_probability_body = QVBoxLayout()
-
-        # XL-MS data
         crosslink_layout = QVBoxLayout()
+        crosslink_layout.addWidget(QLabel("XL-MS data"))
 
-        crosslink_head = QLabel("XL-MS data")
-
-        crosslink_layout.addWidget(crosslink_head)
+        sym_layout = QHBoxLayout()
+        sym_layout.addWidget(QLabel("Surrounding symmetry config file:"))
+        sym_text = QLineEdit()
+        sym_layout.addWidget(sym_text)
+        sym_btn = QPushButton("Select File")
+        sym_layout.addWidget(sym_btn)
+        sym_btn.clicked.connect(lambda: self._select_file(
+            sym_text, self.project_directory_text.text()))
+        crosslink_layout.addLayout(sym_layout)
 
         crosslink_body = QHBoxLayout()
-
-        # Manege crosslink files, adding, presenting, and removing files
         crosslink_files_manager = QVBoxLayout()
-        # 简单实现，用按钮选择多个文件，在多行文本框分行显示
-        
-        # A button to add crosslink files
-        select_crosslink_files_button = QPushButton("Select XL-MS files")
-        crosslink_files_manager.addWidget(select_crosslink_files_button)
-        select_crosslink_files_button.clicked.connect(lambda: self._select_files(crosslink_files_text,
-                                                                                 self.project_directory_text.text()))
 
-        # A text box to show crosslink files
+        select_btn = QPushButton("Select XL-MS files")
+        crosslink_files_manager.addWidget(select_btn)
+
         crosslink_files_text = QTextEdit()
         crosslink_files_text.setReadOnly(True)
         crosslink_files_manager.addWidget(crosslink_files_text)
+        select_btn.clicked.connect(lambda: self._select_files(
+            crosslink_files_text, self.project_directory_text.text()))
 
-        # Add the crosslink files manager to the crosslink layout
-        crosslink_body.addLayout(crosslink_files_manager,stretch=2)
+        crosslink_body.addLayout(crosslink_files_manager, stretch=2)
 
-        # Options for integrating XL-MS data
         crosslink_options_layout = QGridLayout()
 
-        # threshold, acceptor_cutoff, donor_cutoff, evidence_strenght
-        crosslink_options_layout.addWidget(QLabel("threshold"), 0, 0)
         post_threshold_text = QLineEdit()
         post_threshold_text.setText("0.0")
+        crosslink_options_layout.addWidget(QLabel("threshold"), 0, 0)
         crosslink_options_layout.addWidget(post_threshold_text, 0, 1)
 
-        crosslink_options_layout.addWidget(QLabel("acceptor_cutoff"), 1, 0)
         acceptor_cutoff_text = QLineEdit()
         acceptor_cutoff_text.setText("0.00001")
+        crosslink_options_layout.addWidget(QLabel("acceptor_cutoff"), 1, 0)
         crosslink_options_layout.addWidget(acceptor_cutoff_text, 1, 1)
 
-        crosslink_options_layout.addWidget(QLabel("donor_cutoff"), 2, 0)
         donor_cutoff_text = QLineEdit()
         donor_cutoff_text.setText("0.01")
+        crosslink_options_layout.addWidget(QLabel("donor_cutoff"), 2, 0)
         crosslink_options_layout.addWidget(donor_cutoff_text, 2, 1)
 
-        crosslink_options_layout.addWidget(QLabel("evidence_strength"), 3, 0)
         evidence_strength_text = QLineEdit()
         evidence_strength_text.setText("10")
+        crosslink_options_layout.addWidget(QLabel("evidence_strength"), 3, 0)
         crosslink_options_layout.addWidget(evidence_strength_text, 3, 1)
 
-
-        # Add the crosslink options to the crosslink layout
-        crosslink_body.addLayout(crosslink_options_layout,stretch=1)
-
+        crosslink_body.addLayout(crosslink_options_layout, stretch=1)
         crosslink_layout.addLayout(crosslink_body)
+        body.addLayout(crosslink_layout)
 
-        # Add the crosslink layout to the posterior probability body
-        posterior_probability_body.addLayout(crosslink_layout)
-
-        # Submit button
-        posterior_probability_button = QPushButton("Integrate experimental data")
-        posterior_probability_body.addWidget(posterior_probability_button)
-        posterior_probability_button.clicked.connect(lambda: self._calculate_posterior_probability(self.project_directory_text.text(),
-                                                                                                   self.domain_directory_text.text(),
-                                                                                                   self.map_directory_text.text(),
-                                                                                                   post_threshold_text.text(),
-                                                                                                   self.fitout_directory_text.text(),
-                                                                                                   acceptor_cutoff_text.text(),
-                                                                                                   donor_cutoff_text.text(),
-                                                                                                   evidence_strength_text.text(),
-                                                                                                   crosslink_files_text.toPlainText().split("\n")))
-        
-        posterior_probability_layout.addLayout(posterior_probability_body)
-
-
-        # --------------------------------------------------------------------------------------------------------
-
-        # 底部弹簧spacer
-        vertival_bottom_spacer_of_calculation_tab = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        # --------------------------------------------------------------------------------------------------------
-
-        # add all layouts to main layout
-
-        calculation_layout.addLayout(global_options_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line())
-
-        calculation_layout.addLayout(file_fetching_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line())
-
-        calculation_layout.addLayout(domain_parsing_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line())
-
-        calculation_layout.addLayout(fitting_scoring_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line())
-
-        calculation_layout.addLayout(prior_probability_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line())
-
-        calculation_layout.addLayout(posterior_probability_layout)
-
-        calculation_layout.addWidget(self.create_horizontal_line(thickness=4))
-
-        calculation_layout.addItem(vertival_bottom_spacer_of_calculation_tab)
-
-        return calculation_tab
+        button = QPushButton("Integrate experimental data")
+        body.addWidget(button)
+        button.clicked.connect(lambda: self._calculate_posterior_probability(
+            self.project_directory_text.text(), self.domain_directory_text.text(),
+            self.map_directory_text.text(), post_threshold_text.text(),
+            self.fitout_directory_text.text(), acceptor_cutoff_text.text(),
+            donor_cutoff_text.text(), evidence_strength_text.text(),
+            sym_text.text(), crosslink_files_text.toPlainText().split("\n")))
+        layout.addLayout(body)
+        return layout
     
     # project 初始化
     def _initialize_project(self, project_directory_text):
@@ -591,7 +432,7 @@ class DomainSeeker(ToolInstance):
                                                                                       self.domain_directory_text.text(),
                                                                                       self.fitout_directory_text.text()))
         
-        # a button to get posterior results
+        # 按钮：获取后验概率
         get_posterior_results_button = QPushButton("Get posterior results")
         result_presentation_control_layout.addWidget(get_posterior_results_button, 0, 1)
         get_posterior_results_button.clicked.connect(lambda: self._get_posterior_results(self.project_directory_text.text(),
@@ -638,6 +479,29 @@ class DomainSeeker(ToolInstance):
         line.setStyleSheet(styles.get(style, styles["solid"]))
         return line
 
+    def _create_scroll_area(self, name, layout_class=QVBoxLayout):
+        """Create a scroll area containing a widget with the given layout class."""
+        scroll = QScrollArea()
+        scroll.setObjectName(name)
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        container.setObjectName(f"{name}_container")
+        container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        scroll.setWidget(container)
+        layout = layout_class(container)
+        return scroll, layout
+
+    def _add_directory_row(self, layout, row, label, line_edit, read_only=False, callback=None):
+        """Add a label + line edit + select button row to the given grid layout."""
+        layout.addWidget(QLabel(label), row, 0)
+        if read_only:
+            line_edit.setReadOnly(True)
+        layout.addWidget(line_edit, row, 1)
+        button = QPushButton("Select Directory")
+        layout.addWidget(button, row, 2)
+        if callback:
+            button.clicked.connect(callback)
+
     def _select_directory(self, target_text_edit, start_directory=""):
         try:
             # If the start directory does not exist, reset it to an empty string
@@ -659,7 +523,7 @@ class DomainSeeker(ToolInstance):
             file_path, _ = QFileDialog.getOpenFileName(None, 
                                                        "Select a file containing candidate proteins", 
                                                        start_directory, 
-                                                       "Text files (*.txt *.csv)")
+                                                       "")
             if file_path:
                 target_text_edit.setText(file_path)
         except Exception as e:
@@ -737,20 +601,7 @@ class DomainSeeker(ToolInstance):
         
     # 建立空白结果grid
     def _generate_blank_results(self, target_layout,map_directory):
-        # 创建滚动区域
-        result_scroll_area = QScrollArea()
-        result_scroll_area.setObjectName("result_scroll_area")
-        result_scroll_area.setWidgetResizable(True)
-
-        # 创建滚动区域容器
-        result_scroll_area_container = QWidget()
-        result_scroll_area_container.setObjectName("result_scroll_area_container")
-        # 垂直方向尽可能大
-        result_scroll_area_container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        result_scroll_area.setWidget(result_scroll_area_container)
-
-        # 创建网格布局，并添加到滚动区域容器
-        result_layout = QGridLayout(result_scroll_area_container)
+        result_scroll_area, result_layout = self._create_scroll_area("result_scroll_area", QGridLayout)
         result_layout.setObjectName("result_layout")
         # 顶端对齐
         result_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -770,28 +621,6 @@ class DomainSeeker(ToolInstance):
         result_layout.setColumnStretch(5, 2)
         result_layout.addWidget(QLabel("pos_rank"), 0, 6)
         result_layout.setColumnStretch(6, 2)
-        
-        # # 总体状态结果
-        # # Add a label to show the aggregated result
-        # result_layout.addWidget(QLabel("Whole"), 1, 0)
-
-        # # prior_prob,prior_rank, posterior_prob, posterior_rank
-        # aggregated_prior_prob_text = QLineEdit()
-        # aggregated_prior_prob_text.setReadOnly(True)
-        # result_layout.addWidget(aggregated_prior_prob_text, 1, 3)
-
-        # aggregated_prior_rank_text = QLineEdit()
-        # aggregated_prior_rank_text.setReadOnly(False)
-        # result_layout.addWidget(aggregated_prior_rank_text, 1, 4)
-
-        # aggregated_posterior_prob_text = QLineEdit()
-        # aggregated_posterior_prob_text.setReadOnly(True)
-        # result_layout.addWidget(aggregated_posterior_prob_text, 1, 5)
-
-        # aggregated_posterior_rank_text = QLineEdit()
-        # aggregated_posterior_rank_text.setReadOnly(False)
-        # result_layout.addWidget(aggregated_posterior_rank_text, 1, 6)
-
 
         # 单密度结果
         # 获取所有density文件名
@@ -927,10 +756,22 @@ class DomainSeeker(ToolInstance):
         # 读取交联文件
         compliant_crosslinks_file_path = os.path.join(project_directory, "compliant_crosslinks.npy")
         if os.path.exists(compliant_crosslinks_file_path):
-            self.compliant_crosslinks = np.load(compliant_crosslinks_file_path, allow_pickle=True).item()
+            compliant_crosslinks = np.load(compliant_crosslinks_file_path, allow_pickle=True).item()
         else:
             self.session.logger.error(f"Compliant crosslinks file {compliant_crosslinks_file_path} does not exist")
             return
+        # 提取对称性变化列表到self.symmetry_transform_list
+        # 如果compliant_crosslinks不存在"apply_symmetry_transform"键，设为空列表
+        if "apply_symmetry_transform" not in compliant_crosslinks.keys():
+            compliant_crosslinks["apply_symmetry_transform"] = []
+        # 从self.compliant_crosslinks中提取对称性变化列表
+        self.symmetry_transform_list = compliant_crosslinks["apply_symmetry_transform"]
+        # 从compliant_crosslinks中删除"apply_symmetry_transform"键
+        compliant_crosslinks.pop("apply_symmetry_transform")
+        # 添加到self中
+        self.compliant_crosslinks = compliant_crosslinks
+        # 记录对称性模型{(density_name, copy_id):[density_model,domain_model]}
+        self.symmetry_models = {}
         # 设置交联显示格式
         run(self.session,"distance style radius 0.3")
         # 如何没有compliant_crosslinks，则输出提示
@@ -956,7 +797,7 @@ class DomainSeeker(ToolInstance):
     
     # 导入并显示电镜密度
     def _open_density_files(self, map_directory):
-        density_map_models=[]
+        density_map_models={}
         # 验证密度路径有效
         if not map_directory or not os.path.exists(map_directory) or not os.path.isdir(map_directory):
             self.session.logger.error(f"Map directory {map_directory} does not exist or is not a directory")
@@ -966,7 +807,7 @@ class DomainSeeker(ToolInstance):
             if os.path.exists(density_file_path):
                 map_model=run(self.session, f"open \"{density_file_path}\" name {density_name}")[0]
                 map_model.set_parameters(surface_colors=[(178/255,178/255,178/255)],transparency=0.5)
-                density_map_models.append(map_model)
+                density_map_models[density_name] = map_model
             else:
                 self.session.logger.error(f"Density file {density_file_path} does not exist")
                 return
@@ -981,9 +822,41 @@ class DomainSeeker(ToolInstance):
         transform_matrix=log_data.reshape((3,4))
         return transform_matrix
     
-    # 模型平移旋转变换
-    def transform_model(self,model,transform_matrix):
-        model.position=Place(transform_matrix)
+    # 从平移和旋转信息生成变换矩阵3*4
+    def generate_transform_matrix(self, axis, center, angle_deg, translation):
+        axis = np.array(axis, dtype=float)
+        center = np.array(center, dtype=float)
+        angle_deg = float(angle_deg)
+        translation = np.array(translation, dtype=float)
+        # 如果axis非空
+        if len(axis)>0:
+            # 计算旋转矩阵
+            k = axis / np.linalg.norm(axis)
+            angle_rad = np.deg2rad(angle_deg)
+            cos_t, sin_t = np.cos(angle_rad), np.sin(angle_rad)
+
+            K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+            R = np.eye(3) + sin_t * K + (1 - cos_t) * (K @ K)
+        else:
+            R = np.eye(3)
+            center = np.zeros(3)
+        # 如果translation是空
+        if len(translation)==0:
+            translation = np.zeros(3)
+        t = (np.eye(3) - R) @ center + translation
+        return np.hstack([R, t.reshape(3, 1)])
+        
+    
+    # 模型变换
+    def transform_model(self, model, transform_matrix):
+        """Apply a 3x4 transform matrix [R|t] to the model's current position."""
+        # 获取model自带的transform_matrix (3x4)
+        M = model.position.matrix
+        # 3x4 矩阵复合: new_tf @ M  =  [R_new @ R_M  |  R_new @ t_M + t_new]
+        R_new, t_new = transform_matrix[:3, :3], transform_matrix[:3, 3]
+        R_M, t_M = M[:3, :3], M[:3, 3]
+        combined = np.hstack([R_new @ R_M, (R_new @ t_M + t_new).reshape(3, 1)])
+        model.position = Place(combined)
     
     # 导入当前状态的原子结构
     def _update_fitted_domains(self, project_directory, domain_directory = "", fitout_dir = ""):
@@ -1035,7 +908,7 @@ class DomainSeeker(ToolInstance):
                 self.session.logger.error(f"Domain file {domain_file_path} does not exist")
                 return
         
-    # 根据当前状态在当前显示的模型中绘制交联
+    # 根据当前状态绘制交联
     def _draw_crosslinks(self, crosslink_color = "red", crosslink_radius = 1, crosslink_dashes = 5, label_height = 2.5):
         # 删除已有交联
         run(self.session,"distance delete")
@@ -1048,7 +921,11 @@ class DomainSeeker(ToolInstance):
                 current_state_1 = self.states_of_densities[density_id_1][current_state_id_1]
                 if current_state_1 != state_1:
                     continue
-                for density_2, state_2, residue_id_1, residue_id_2 in self.compliant_crosslinks[density_1][state_1]:
+                for item in self.compliant_crosslinks[density_1][state_1]:
+                    density_2 = item[0]
+                    state_2 = item[1]
+                    residue_id_1 = item[2]
+                    residue_id_2 = item[3]
                     density_id_2 = self.density_names.index(density_2)
                     current_state_id_2 = self.state_selection[density_id_2]
                     current_state_2 = self.states_of_densities[density_id_2][current_state_id_2]
@@ -1057,7 +934,51 @@ class DomainSeeker(ToolInstance):
                     # 绘制交联
                     model_1 = self.fitted_domain_models[density_id_1][1]
                     model_id_1 = ".".join([str(item) for item in model_1.id])
-                    model_2 = self.fitted_domain_models[density_id_2][1]
+                    copy_id_2 = 0 if len(item) < 5 else item[4]
+                    # 如果copy_id_2>0，对应对称性模型，需要额外打开密度和原子模型，
+                    # 并根据根据symmetry_transform_list[copy_id_2]进行对称性变换
+                    if copy_id_2 > 0:
+                        if (density_2, copy_id_2) not in self.symmetry_models.keys():
+                            # init symmetry_model
+                            self.symmetry_models[(density_2, copy_id_2)] = [None, None]
+                            # symmetry matrix
+                            symmetry_transform = self.symmetry_transform_list[copy_id_2-1]
+                            axis = symmetry_transform["rotation_axis"]
+                            center = symmetry_transform["rotation_point"]
+                            angle_deg = symmetry_transform["rotation_degrees"]
+                            translation = symmetry_transform["translation"]
+                            symmetry_matrix = self.generate_transform_matrix(axis, center, angle_deg, translation)
+                            # map
+                            existing_map_model_2 = self.density_map_models[density_2]
+                            # volume copy
+                            symmetry_map_model_2 = run(self.session,f"volume copy #{existing_map_model_2.id[0]}")
+                            # show orignal map
+                            run(self.session,f"show #{existing_map_model_2.id[0]}")
+                            # rename
+                            run(self.session,f"rename #{symmetry_map_model_2.id[0]} {density_2}.{copy_id_2}")
+                            # transform
+                            self.transform_model(symmetry_map_model_2, symmetry_matrix)
+                            # add to symmetry_models
+                            self.symmetry_models[(density_2, copy_id_2)][0] = symmetry_map_model_2
+                            # set color 浅黄色
+                            symmetry_map_model_2.set_parameters(surface_colors=[(242/255,222/255,179/255)],transparency=0.5)
+                            # domain
+                            existing_domain_model_2 = self.fitted_domain_models[density_id_2][1]
+                            # 复制：combine #{old_id} name {new_name}
+                            # new_name格式："{density_name}.{copy_id}
+                            symmetry_domain_model_2 = run(self.session,f" combine #{existing_domain_model_2.id[0]} name {density_2}.{copy_id_2}.pdb")
+                            # transform
+                            self.transform_model(symmetry_domain_model_2, symmetry_matrix)
+                            # add to symmetry_models
+                            self.symmetry_models[(density_2, copy_id_2)][1] = symmetry_domain_model_2
+                            # 传递model
+                            model_2 = symmetry_domain_model_2
+                        else:
+                            # 直接使用已有模型
+                            symmetry_map_model_2, symmetry_domain_model_2 = self.symmetry_models[(density_2, copy_id_2)]
+                            model_2 = symmetry_domain_model_2
+                    else:
+                        model_2 = self.fitted_domain_models[density_id_2][1]
                     model_id_2 = ".".join([str(item) for item in model_2.id])
                     run(self.session,f"distance #{model_id_1}:{residue_id_1}@CA #{model_id_2}:{residue_id_2}@CA color {crosslink_color} radius {crosslink_radius} dashes {crosslink_dashes}")
                     count+=1
@@ -1069,10 +990,6 @@ class DomainSeeker(ToolInstance):
 
     # 更新先验结果到结果grid中
     def _update_prior_results(self):
-        # 更新总体状态结果
-        # aggregated_prior_prob_text = self.result_layout.itemAtPosition(1, 3).widget()
-        # aggregated_prior_prob = np.prod([self.prior_prob_list[density_id][self.state_selection[density_id]] for density_id in range(len(self.density_names))])
-        # aggregated_prior_prob_text.setText(f"{aggregated_prior_prob:.2e}")
         # 更新单密度状态结果
         for density_id, state_id in enumerate(self.state_selection):
             # 更新先验概率
@@ -1131,6 +1048,15 @@ class DomainSeeker(ToolInstance):
             self._update_prior_results()
         if self.posterior_results_loaded:
             self._update_posterior_results()
+            # 删除所有对称性模型
+            # 记录所有key，复制以防止迭代中修改字典导致错误
+            keys = list(self.symmetry_models.keys()).copy()
+            for key in keys:
+                density_model, domain_model = self.symmetry_models[key]
+                density_model.delete()
+                domain_model.delete()
+                # 从self.symmetry_models中移除该条目
+                self.symmetry_models.pop(key)
             # 绘制交联
             self._draw_crosslinks()
 
@@ -1168,6 +1094,15 @@ class DomainSeeker(ToolInstance):
             self._update_prior_results()
         if self.posterior_results_loaded:
             self._update_posterior_results()
+            # 删除所有对称性模型
+            # 记录所有key，复制以防止迭代中修改字典导致错误
+            keys = list(self.symmetry_models.keys()).copy()
+            for key in keys:
+                density_model, domain_model = self.symmetry_models[key]
+                density_model.delete()
+                domain_model.delete()
+                # 从self.symmetry_models中移除该条目
+                self.symmetry_models.pop(key)
             # 绘制交联
             self._draw_crosslinks()
                 
@@ -1288,7 +1223,7 @@ class DomainSeeker(ToolInstance):
         self.run_detatched_subprocess(arg_list)
 
     # 计算后验概率
-    def _calculate_posterior_probability(self, project_directory,origin_domain_dir,map_dir,map_level,fitout_dir,acceptor_prior_probability_cutoff,donor_prior_probability_cutoff,evidence_strenth,crosslink_files):
+    def _calculate_posterior_probability(self, project_directory,origin_domain_dir,map_dir,map_level,fitout_dir,acceptor_prior_probability_cutoff,donor_prior_probability_cutoff,evidence_strenth,symmetry_transform_file,crosslink_files):
         # Check if the project directory is valid, if not, raise an error
         if not project_directory or not os.path.exists(project_directory):
             self.session.logger.error(f"Project directory {project_directory} does not exist")
@@ -1311,6 +1246,13 @@ class DomainSeeker(ToolInstance):
             self.session.logger.error(f"Fitout directory {fitout_dir} does not exist")
             return
         fitout_dir = fitout_dir.replace("\\", "/")
+        # Check if the symmetry transform file is valid
+        # 如果为空，设置为“None”
+        if not symmetry_transform_file:
+            symmetry_transform_file = "None"
+        elif not os.path.exists(symmetry_transform_file):
+            self.session.logger.error(f"Symmetry transform file {symmetry_transform_file} does not exist")
+            return
         # Check if the crosslink files are valid
         for crosslink_file in crosslink_files:
             if not os.path.exists(crosslink_file):
@@ -1327,7 +1269,8 @@ class DomainSeeker(ToolInstance):
                     fitout_dir,
                     acceptor_prior_probability_cutoff,
                     donor_prior_probability_cutoff,
-                    evidence_strenth]
+                    evidence_strenth,
+                    symmetry_transform_file]
         arg_list+=crosslink_files
         self.run_detatched_subprocess(arg_list)
 

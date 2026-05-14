@@ -210,6 +210,28 @@ The figure below illustrates how to visualize the results of the posterior calcu
 
 The results show that after integrating the XL-MS data, the correct proteins are ranked first in both cases with high confidence. Furthermore, visual inspection confirms that both domains fit well into their respective density maps and are consistent with the additional experimental evidence, significantly increasing our confidence in the results.
 
+#### Apply symmetry transformations to the density maps
+
+DomainSeeker allows users to provide custom symmetry transformations. Users specify the symmetry operations that map the initial unit cell to adjacent positions in a JSON file. Since biological macromolecular assemblies typically involve only rotational and translational symmetry, users only need to provide, for each relevant symmetry operation, the symmetry axis, a reference point, the rotation angle and translation vector, together with the list of affected density regions. DomainSeeker then automatically generates symmetry-related copies and extends the scope of cross-link data accordingly.
+
+<img src="/images/symmetry_transform.png" width="600px">
+
+As shown in the figure above, the JSON file on the right configures a transformation that shifts density B downward by -60 Å along the z-axis. This transformation does not involve rotation, so the rotation configuration items remain at their default values (empty list or 0—these fields must be filled). Similarly, if a transformation does not involve translation, simply set the `translation` field to its default value (empty list—this field must also be filled).
+
+To test the effectiveness of symmetry transformations, we provide a `crosslinks_symmetry_test.txt` file in the `Example` folder. It contains a single cross-link connecting density A and the transformed density B's corresponding domain.
+
+Let us modify the posterior calculation input and recompute:
+
+<img src="/images/symmetry_test.png" width="600px">
+
+After the calculation completes, click the "Get posterior results" button again in the Presentation tab. The results are shown below:
+
+<img src="/images/symmetry_results.png" width="800px">
+
+We can see that the cross-link between density A and the symmetry counterpart of density B elevates the correct assignment of density B to the first rank in the posterior results.
+
+
+
 
 ## Debug    
 If there is no response after clicking the calculation button, please check the following:    

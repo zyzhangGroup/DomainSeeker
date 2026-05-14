@@ -1,0 +1,11 @@
+[
+    {
+        "rotation_axis": [],
+        "rotation_point": [],
+        "rotation_degrees": 0,
+        "translation": [0, 0, -60],
+        "densities": [
+            "B"
+        ]
+    }
+]
