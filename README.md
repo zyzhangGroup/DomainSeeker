@@ -53,18 +53,6 @@ Installation time depends on how long it takes to download the dependencies.
    devel install DomainSeeker_extension_path
    ```
 
-## Usage
-
-### Launch the DomainSeeker Plugin
-
-The DomainSeeker plugin can be launched via the menu bar by selecting  **"Tools" → "Structure Analysis" → "DomainSeeker"** .
-
-<img src="images/launching.png" width="800px">
-
-We show the interface of DomainSeeker here:
-
-<img src="images/interface.png" width="650px">
-
 ## Workflow
 
 You can use the provided Example data to quickly test the plugin.  
@@ -109,8 +97,6 @@ When running with the data in the Example folder, setting n_processto 10 allows 
 > **min_domain_size**: Domains containing fewer than this number of residues are filtered out.  
 > **max_domain_size**: Domains containing more than this number of residues are filtered out.  
 > **n_process**: Number of parallel processes to use.  
-
-For the AF3 model,  setting  *plddt_cutoff* = 50 may result in a better performance.
 
 The output files will be saved in the folder specified by the "Domain Directory" option in the "Global Options" module.Two types of output files are generated:
 
