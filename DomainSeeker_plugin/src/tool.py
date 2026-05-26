@@ -3,17 +3,16 @@ from chimerax.core.tools import ToolInstance
 from chimerax.ui import MainToolWindow
 from Qt.QtWidgets import (QVBoxLayout, QHBoxLayout, QGridLayout,
                           QWidget, QTabWidget, QSpacerItem,
-                          QLabel, 
-                          QLineEdit, QTextEdit, 
-                          QPushButton, 
-                          QFileDialog, 
+                          QLabel,
+                          QLineEdit, QTextEdit,
+                          QPushButton, QCheckBox,
+                          QFileDialog,
                           QFrame, QSizePolicy,
                           QScrollArea )
 from Qt.QtCore import Qt
 import numpy as np
 from chimerax.core.commands import run
 from chimerax.geometry.place import Place
-import datetime
 import subprocess, threading
 
 script_dir=os.path.dirname(os.path.realpath(__file__))
@@ -168,9 +167,14 @@ class DomainSeeker(ToolInstance):
 
         fetch_btn = QPushButton("Fetch files")
         body.addWidget(fetch_btn)
+
+        pae_only_cb = QCheckBox("PAE only")
+        body.addWidget(pae_only_cb)
+
         fetch_btn.clicked.connect(lambda: self._fetch_pdb_and_pae_files(
             protein_list_file_path_text.text(), self.project_directory_text.text(),
-            self.pdb_directory_text.text(), self.pae_directory_text.text()))
+            self.pdb_directory_text.text(), self.pae_directory_text.text(),
+            pae_only_cb.isChecked()))
         layout.addLayout(body)
         return layout
 
@@ -384,16 +388,7 @@ class DomainSeeker(ToolInstance):
     def _initialize_project(self, project_directory_text):
         # 选择目录
         self._select_directory(project_directory_text)
-        # 检查project目录下是否存在error.log文件。如果不存在，创建一个，并记录日志创建时间
-        error_log_path = os.path.join(project_directory_text.text(), "error.log")
-        error_log_path = error_log_path.replace("\\", "/")
-        if not os.path.exists(error_log_path):
-            with open(error_log_path, "w") as f:
-                f.write(f"Log created at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                # 开头分隔符
-                f.write('='*80+'\n')
-        # 将error文件路径保存到self中
-        self.error_log_path = error_log_path
+        pass
         
                 
         
@@ -543,7 +538,7 @@ class DomainSeeker(ToolInstance):
         except Exception as e:
             self.session.logger.error(f"Error during file selection: {e}")
     
-    def _fetch_pdb_and_pae_files(self, protein_list_file_path, project_directory, pdb_directory = "", pae_directory = ""):
+    def _fetch_pdb_and_pae_files(self, protein_list_file_path, project_directory, pdb_directory = "", pae_directory = "", pae_only = False):
         # 检查protein_list_file_path
         if not protein_list_file_path:
             self.session.logger.error("Please select a file containing candidate proteins")
@@ -555,13 +550,14 @@ class DomainSeeker(ToolInstance):
         if not project_directory or not os.path.exists(project_directory):
             self.session.logger.error(f"Project directory {project_directory} does not exist")
             return
-        # Check if the pdb directory is valid
-        if not pdb_directory:
-            pdb_directory = os.path.join(project_directory, "pdb_files")
-        elif not os.path.exists(pdb_directory):
-            self.session.logger.error(f"PDB directory {pdb_directory} does not exist")
-            return
-        pdb_directory = pdb_directory.replace("\\", "/")
+        # Check if the pdb directory is valid (skip in pae_only mode)
+        if not pae_only:
+            if not pdb_directory:
+                pdb_directory = os.path.join(project_directory, "pdb_files")
+            elif not os.path.exists(pdb_directory):
+                self.session.logger.error(f"PDB directory {pdb_directory} does not exist")
+                return
+            pdb_directory = pdb_directory.replace("\\", "/")
         # Check if the pae directory is valid
         if not pae_directory:
             pae_directory = os.path.join(project_directory, "pae_files")
@@ -570,41 +566,74 @@ class DomainSeeker(ToolInstance):
             return
         pae_directory = pae_directory.replace("\\", "/")
         # 运行子进程
-        self.session.logger.info("Start to fetch pdb and pae files...\n\n")
-        arg_list=[f'{script_dir}/fetch_pdb_pae.py',
-                  self.error_log_path,
-                  protein_list_file_path,
-                  project_directory,
-                  pdb_directory,
-                  pae_directory]
+        self.session.logger.info("Start to fetch files...")
+        if pae_only:
+            arg_list=[f'{script_dir}/fetch_pdb_pae.py',
+                      protein_list_file_path,
+                      project_directory,
+                      pae_directory,
+                      '--pae-only']
+        else:
+            arg_list=[f'{script_dir}/fetch_pdb_pae.py',
+                      protein_list_file_path,
+                      project_directory,
+                      pdb_directory,
+                      pae_directory]
         self.run_detatched_subprocess(arg_list)
 
+    def _reset_result_variables(self):
+        """重置所有结果相关的运行时变量"""
+        self.density_names = []
+        self.states = []
+        self.prior_probs = []
+        self.posterior_idx = []
+        self.posterior_probs = []
+        self.state_selection = []
+        self.fitted_domain_models = []
+        self.density_map_models = {}
+        self.compliant_crosslinks = {}
+        self.symmetry_transform_list = []
+        self.symmetry_models = {}
+        self.prior_results_loaded = False
+        self.posterior_results_loaded = False
+
     def _initialize_results(self, target_layout, map_directory, project_directory, domain_directory = "", fitout_dir = ""):
-        # 生成空白结果框架
-        result_layout = self._generate_blank_results(target_layout,map_directory)
-        # 将result_layout添加到self中，以便后续更新
+        # 重置运行时变量
+        self._reset_result_variables()
+
+        # 生成空白结果框架（复用已有布局则清空重填，否则新建）
+        result_layout = self._generate_blank_results(target_layout, map_directory)
         self.result_layout = result_layout
         # 打开密度文件
         self._open_density_files(map_directory)
-        # 初始化fitted_domain_models记录
-        self.fitted_domain_models = [(None,None) for _ in range(len(self.density_names))] # (state_id, atomic_model)
-        # 读取先验概率结果， 并初始化选择器
-        self._get_prior_results(project_directory,fitout_dir)
+        # 初始化 fitted_domain_models 记录
+        self.fitted_domain_models = [(None, None) for _ in range(len(self.density_names))]
+        # 读取先验概率结果，并初始化选择器
+        self._get_prior_results(project_directory, fitout_dir)
         # 显示初始状态
         self._update_current_states()
         # 显示初始状态的先验结果
         self._update_prior_results()
         # 更新原子模型
-        self._update_fitted_domains(project_directory,domain_directory,fitout_dir)
+        self._update_fitted_domains(project_directory, domain_directory, fitout_dir)
         
 
         
     # 建立空白结果grid
-    def _generate_blank_results(self, target_layout,map_directory):
-        result_scroll_area, result_layout = self._create_scroll_area("result_scroll_area", QGridLayout)
-        result_layout.setObjectName("result_layout")
-        # 顶端对齐
-        result_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+    def _generate_blank_results(self, target_layout, map_directory):
+        if hasattr(self, 'result_layout') and self.result_layout is not None:
+            result_layout = self.result_layout
+            # 清空布局中所有已有 widget
+            while result_layout.count():
+                item = result_layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+        else:
+            result_scroll_area, result_layout = self._create_scroll_area("result_scroll_area", QGridLayout)
+            result_layout.setObjectName("result_layout")
+            result_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            target_layout.addWidget(result_scroll_area)
 
         # density, domain, fit, prior_prob,prior_rank, posterior_prob, posterior_rank
         result_layout.addWidget(QLabel("density"), 0, 0)
@@ -661,9 +690,6 @@ class DomainSeeker(ToolInstance):
         result_layout.setColumnStretch(4, 2)
         result_layout.setColumnStretch(5, 2)
         result_layout.setColumnStretch(6, 2)
-        
-        # 将滚动区域添加到结果布局
-        target_layout.addWidget(result_scroll_area)
 
         return result_layout
 
@@ -677,42 +703,24 @@ class DomainSeeker(ToolInstance):
         if not os.path.exists(fitout_dir):
             self.session.logger.error(f"Fitout directory {fitout_dir} does not exist")
             return
-        # 记录每个密度的状态
-        states_of_densities=[]
-        states_to_id_dict=[]
-        # 先验概率列表
-        prior_prob_list = []
-        # 记录每个状态的排名
-        prior_sorted_state_ids = []
+
+        self.states = []
+        self.prior_probs = []
+
         for density_name in self.density_names:
             fit_out_subdir=os.path.join(fitout_dir, density_name+".mrc")
-            prior_probability_file_path = os.path.join(fit_out_subdir, "prior_probabilities.txt")
-            # 判断先验概率文件是否存在
-            if os.path.exists(prior_probability_file_path):
-                # 读取先验概率文件
-                data=np.loadtxt(prior_probability_file_path, dtype=str)
-                # 记录状态名
-                states_of_densities.append([state for state in data[:,0]])
-                states_to_id_dict.append({state:i for i, state in enumerate(data[:,0])})
-                # 添加到先验概率列表
-                prior_probs = [float(p) for p in data[:,1]]
-                prior_prob_list.append(prior_probs)
-                # 记录排序后的state_id
-                prior_sorted_state_ids.append(np.argsort(prior_probs)[::-1].tolist())
+            path = os.path.join(fit_out_subdir, "prior_probabilities.txt")
+            if os.path.exists(path):
+                data = np.loadtxt(path, dtype=str)
+                self.states.append(data[:, 0].copy())
+                self.prior_probs.append(data[:, 1].astype(np.float32))
             else:
-                self.session.logger.error(f"Prior probability file {prior_probability_file_path} does not exist")
+                self.session.logger.error(f"Prior probability file {path} does not exist")
                 return
-        # 添加到self中
-        self.states_of_densities = states_of_densities
-        self.states_to_id_dict = states_to_id_dict
-        self.prior_prob_list = prior_prob_list
-        self.prior_sorted_state_ids = prior_sorted_state_ids
         # 标记先验结果已加载
         self.prior_results_loaded = True
-        # 初始化状态选择器
-        # 选择器记录先验结果中的state_id，用于更新显示
-        prior_rank_list = [0 for i in range(len(self.density_names))]
-        self.state_selection = [self.prior_sorted_state_ids[density_id][prior_rank_list[density_id]] for density_id in range(len(self.density_names))]
+        # 初始化状态选择器（存 (state_name, prior_rank)，初始选最优先验排名）
+        self.state_selection = [(self.states[d][0], 0) for d in range(len(self.density_names))]
 
     # 获取后验概率结果
     def _get_posterior_results(self, project_directory, fitout_dir = ""):
@@ -723,31 +731,22 @@ class DomainSeeker(ToolInstance):
         if not os.path.exists(fitout_dir):
             self.session.logger.error(f"Fitout directory {fitout_dir} does not exist")
             return
-        # 后验概率列表
-        posterior_prob_list = []
-        # 记录每个状态的排名
-        posterior_sorted_state_ids = []
+
+        self.posterior_idx = []
+        self.posterior_probs = []
+
         for density_id, density_name in enumerate(self.density_names):
             fit_out_subdir=os.path.join(fitout_dir, density_name+".mrc")
-            posterior_probability_file_path = os.path.join(fit_out_subdir, "posterior_probabilities.txt")
-            # 判断后验概率文件是否存在
-            if os.path.exists(posterior_probability_file_path):
-                # 读取后验概率文件
-                data=np.loadtxt(posterior_probability_file_path, dtype=str)
-                # 计算每一行的state_id，后续按次录入
-                state_ids = [self.states_to_id_dict[density_id][state] for state in data[:,0]]
-                index_list = np.argsort(state_ids)
-                # 添加到后验概率列表
-                posterior_probs = [float(p) for p in data[index_list,1]]
-                posterior_prob_list.append(posterior_probs)
-                # 记录按后验概率排序后的state_id
-                posterior_sorted_state_ids.append(state_ids)
+            path = os.path.join(fit_out_subdir, "posterior_probabilities.txt")
+            if os.path.exists(path):
+                data = np.loadtxt(path, dtype=str)
+                state_to_idx = {s: i for i, s in enumerate(self.states[density_id])}
+                self.posterior_idx.append(
+                    np.array([state_to_idx[s] for s in data[:, 0]], dtype=np.int32))
+                self.posterior_probs.append(data[:, 1].astype(np.float32))
             else:
-                self.session.logger.error(f"Posterior probability file {posterior_probability_file_path} does not exist")
+                self.session.logger.error(f"Posterior probability file {path} does not exist")
                 return
-        # 添加到self中
-        self.posterior_prob_list = posterior_prob_list
-        self.posterior_sorted_state_ids = posterior_sorted_state_ids
         # 标记后验结果已加载
         self.posterior_results_loaded = True
         # 更新后验结果
@@ -784,14 +783,11 @@ class DomainSeeker(ToolInstance):
 
     # 更新当前状态到结果grid中
     def _update_current_states(self):
-        for density_id, state_id in enumerate(self.state_selection):
-            state = self.states_of_densities[density_id][state_id]
-            doamin = "_".join(state.split("_")[:-1])
-            fit_id = int(state.split("_")[-1])
-            # 更新单密度状态
-            # 更新单密度状态
+        for density_id, (state_name, _) in enumerate(self.state_selection):
+            domain = "_".join(state_name.split("_")[:-1])
+            fit_id = int(state_name.split("_")[-1])
             domain_name_text = self.result_layout.itemAtPosition(2+density_id, 1).widget()
-            domain_name_text.setText(f"{doamin}")
+            domain_name_text.setText(f"{domain}")
             fit_id_text = self.result_layout.itemAtPosition(2+density_id, 2).widget()
             fit_id_text.setText(f"{fit_id}")
     
@@ -881,8 +877,7 @@ class DomainSeeker(ToolInstance):
         # 导入每个密度的状态
         for density_id, density_name in enumerate(self.density_names):
             fit_out_subdir=os.path.join(fitout_dir, density_name+".mrc")
-            state_id = self.state_selection[density_id]
-            state = self.states_of_densities[density_id][state_id]
+            state, _ = self.state_selection[density_id]
             # 如果state发生变化，删除原有模型，导入新模型
             existing_state = self.fitted_domain_models[density_id][0]
             existing_model = self.fitted_domain_models[density_id][1]
@@ -917,8 +912,7 @@ class DomainSeeker(ToolInstance):
         for density_1 in self.compliant_crosslinks.keys():
             density_id_1 = self.density_names.index(density_1)
             for state_1 in self.compliant_crosslinks[density_1].keys():
-                current_state_id_1 = self.state_selection[density_id_1]
-                current_state_1 = self.states_of_densities[density_id_1][current_state_id_1]
+                current_state_1, _ = self.state_selection[density_id_1]
                 if current_state_1 != state_1:
                     continue
                 for item in self.compliant_crosslinks[density_1][state_1]:
@@ -927,8 +921,7 @@ class DomainSeeker(ToolInstance):
                     residue_id_1 = item[2]
                     residue_id_2 = item[3]
                     density_id_2 = self.density_names.index(density_2)
-                    current_state_id_2 = self.state_selection[density_id_2]
-                    current_state_2 = self.states_of_densities[density_id_2][current_state_id_2]
+                    current_state_2, _ = self.state_selection[density_id_2]
                     if current_state_2 != state_2:
                         continue
                     # 绘制交联
@@ -991,12 +984,9 @@ class DomainSeeker(ToolInstance):
     # 更新先验结果到结果grid中
     def _update_prior_results(self):
         # 更新单密度状态结果
-        for density_id, state_id in enumerate(self.state_selection):
-            # 更新先验概率
+        for density_id, (state_name, prior_rank) in enumerate(self.state_selection):
             prior_prob_text = self.result_layout.itemAtPosition(2+density_id, 3).widget()
-            prior_prob_text.setText(f"{self.prior_prob_list[density_id][state_id]:.4f}")
-            # 更新单密度状态
-            prior_rank = self.prior_sorted_state_ids[density_id].index(state_id)
+            prior_prob_text.setText(f"{self.prior_probs[density_id][prior_rank]:.4f}")
             prior_rank_text = self.result_layout.itemAtPosition(2+density_id, 4).widget()
             prior_rank_text.setText(f"{prior_rank+1}")
 
@@ -1005,14 +995,14 @@ class DomainSeeker(ToolInstance):
         # 更新总体状态结果
         # 后验总概率不等于各概率之积，暂时不显示
         # 更新单密度状态结果
-        for density_id, state_id in enumerate(self.state_selection):
+        for density_id, (state_name, prior_rank) in enumerate(self.state_selection):
+            post_rank = int(np.where(self.posterior_idx[density_id] == prior_rank)[0][0])
             # 更新后验概率
             posterior_prob_text = self.result_layout.itemAtPosition(2+density_id, 5).widget()
-            posterior_prob_text.setText(f"{self.posterior_prob_list[density_id][state_id]:.4f}")
+            posterior_prob_text.setText(f"{self.posterior_probs[density_id][post_rank]:.4f}")
             # 更新单密度状态
-            posterior_rank = self.posterior_sorted_state_ids[density_id].index(state_id)
             posterior_rank_text = self.result_layout.itemAtPosition(2+density_id, 6).widget()
-            posterior_rank_text.setText(f"{posterior_rank+1}")
+            posterior_rank_text.setText(f"{post_rank+1}")
 
     # 根据先验排名更新结果
     def _update_results_by_prior_ranks(self, project_directory, domain_directory = "", fitout_dir = ""):
@@ -1037,10 +1027,8 @@ class DomainSeeker(ToolInstance):
         
         # 获取当前先验排名列表
         prior_rank_list = [int(prior_rank_text.text())-1 for prior_rank_text in [self.result_layout.itemAtPosition(2+density_id, 4).widget() for density_id in range(len(self.density_names))]]
-        # 将排名转化为state_id
-        state_id_list = [self.prior_sorted_state_ids[density_id][prior_rank] for density_id, prior_rank in enumerate(prior_rank_list)]
-        # 更新当前状态选择器
-        self.state_selection = state_id_list
+        # 排名 → (state 名, 先验排名)，更新状态选择器
+        self.state_selection = [(self.states[d][prior_rank], prior_rank) for d, prior_rank in enumerate(prior_rank_list)]
         # 更新显示
         self._update_current_states()
         self._update_fitted_domains(project_directory, domain_directory, fitout_dir)
@@ -1083,10 +1071,8 @@ class DomainSeeker(ToolInstance):
         
         # 获取当前后验排名列表
         posterior_rank_list = [int(posterior_rank_text.text())-1 for posterior_rank_text in [self.result_layout.itemAtPosition(2+density_id, 6).widget() for density_id in range(len(self.density_names))]]
-        # 将排名转化为state_id
-        state_id_list = [self.posterior_sorted_state_ids[density_id][posterior_rank] for density_id, posterior_rank in enumerate(posterior_rank_list)]
-        # 更新当前状态选择器
-        self.state_selection = state_id_list
+        # 后验排名 → (state 名, 先验排名)，更新状态选择器
+        self.state_selection = [(self.states[d][int(self.posterior_idx[d][posterior_rank])], int(self.posterior_idx[d][posterior_rank])) for d, posterior_rank in enumerate(posterior_rank_list)]
         # 更新显示
         self._update_current_states()
         self._update_fitted_domains(project_directory, domain_directory, fitout_dir)
@@ -1138,9 +1124,8 @@ class DomainSeeker(ToolInstance):
             output_dir = domain_directory.replace("\\", "/")
         # run parse_with_pae.py
         # 启动进程
-        self.session.logger.info("Start to parse domains...\n\n")
+        self.session.logger.info("Start to parse domains...")
         arg_list = [f'{script_dir}/parse_with_pae.py',
-                    self.error_log_path,
                     pdb_dir,
                     pae_dir,
                     output_dir,
@@ -1180,10 +1165,9 @@ class DomainSeeker(ToolInstance):
             return
 
         # run fit_and_score.py
-        self.session.logger.info("Start to fit and score domains...\n\n")
+        self.session.logger.info("Start to fit and score domains...")
         # 启动进程
         arg_list=[f"{script_dir}/fit_with_chimerax.py",
-                  self.error_log_path,
                   domains_dir,
                   densities_dir,
                   fitout_dir,
@@ -1211,9 +1195,8 @@ class DomainSeeker(ToolInstance):
             self.session.logger.error(f"Fitout directory {fitout_dir} does not exist")
             return
         # run calculate_prior_probability.py
-        self.session.logger.info("Start to calculate prior probabilities...\n\n")
+        self.session.logger.info("Start to calculate prior probabilities...")
         arg_list = [f"{script_dir}/calculate_prior_probabilities.py",
-                    self.error_log_path,
                     map_dir,
                     fitout_dir,
                     box_num,
@@ -1259,9 +1242,8 @@ class DomainSeeker(ToolInstance):
                 self.session.logger.error(f"Crosslink file {crosslink_file} does not exist")
                 return
         # run calculate_posterior_probability.py
-        self.session.logger.info("Start to calculate posterior probabilities...\n\n")
+        self.session.logger.info("Start to calculate posterior probabilities...")
         arg_list = [f"{script_dir}/calculate_posterior_probabilities.py",
-                    self.error_log_path,
                     project_directory,
                     origin_domain_dir,
                     map_dir,
@@ -1274,26 +1256,37 @@ class DomainSeeker(ToolInstance):
         arg_list+=crosslink_files
         self.run_detatched_subprocess(arg_list)
 
-    # 显示进度状态
-    # chimerax只允许主线程更新界面
-    def write_to_chimerax_logger(self,message,type):
-        if type == "info":
-            self.session.logger.info(message)
-        elif type == "warning":
-            self.session.logger.warning(message)
-        elif type == "error":
-            self.session.logger.error(message)
-        elif type == "status":
-            self.session.logger.status(message)
+    # ── 子进程消息路由 ──────────────────────────────────────────────
+    # stdout → info / status（[STATUS] 前缀 → 状态栏，其余 → info）
+    # stderr → warning / error（[WARN] 前缀 → 警告，其余含 traceback → error）
+    # ChimeraX 只允许主线程更新 UI，故 logger 调用经 thread_safe 调度
 
-    def read_output(self,stream,type):
-        """读取输出流的线程函数"""
+    def _read_stdout(self, stream):
+        """读取子进程 stdout"""
         try:
             for line in iter(stream.readline, ''):
-                # 通过 thread_safe 将更新操作调度到主线程
-                self.session.ui.thread_safe(self.write_to_chimerax_logger, line.strip(), type)
+                line = line.rstrip()
+                if line.startswith("[STATUS]"):
+                    self.session.ui.thread_safe(self.session.logger.status, line[8:])
+                elif line.startswith("[INFO]"):
+                    self.session.ui.thread_safe(self.session.logger.info, line[6:])
+                elif line:
+                    self.session.ui.thread_safe(self.session.logger.info, line)
         except (ValueError, RuntimeError):
-            # 流被关闭或会话结束时的正常异常
+            pass
+
+    def _read_stderr(self, stream):
+        """读取子进程 stderr"""
+        try:
+            for line in iter(stream.readline, ''):
+                line = line.rstrip()
+                if line.startswith("[WARN]"):
+                    self.session.ui.thread_safe(self.session.logger.warning, line[6:])
+                elif line.startswith("[ERROR]"):
+                    self.session.ui.thread_safe(self.session.logger.error, line[7:])
+                else:
+                    self.session.ui.thread_safe(self.session.logger.error, line)
+        except (ValueError, RuntimeError):
             pass
 
 
@@ -1343,11 +1336,11 @@ class DomainSeeker(ToolInstance):
 
         # 启动进程
         proc = subprocess.Popen([python_exe] + arg_list, **kwargs, env=env) # 用列表传递python_exe和参数，避免路径中有空格出错
-        # 启动进度监控线程
-        status_thread = threading.Thread(target=self.read_output, args=(proc.stdout,"status"))
-        status_thread.daemon = True
-        status_thread.start()
-        # 启动错误监控进程
-        error_thread = threading.Thread(target=self.read_output, args=(proc.stderr,"error"))
-        error_thread.daemon = True
-        error_thread.start()
+        # 监控 stdout（info / status）
+        stdout_thread = threading.Thread(target=self._read_stdout, args=(proc.stdout,))
+        stdout_thread.daemon = True
+        stdout_thread.start()
+        # 监控 stderr（warning / error）
+        stderr_thread = threading.Thread(target=self._read_stderr, args=(proc.stderr,))
+        stderr_thread.daemon = True
+        stderr_thread.start()

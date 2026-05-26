@@ -2,7 +2,7 @@
 
 DomainSeeker is a computational workflow  that integrates AlphaFold2-predicted structures with experimental data to identify protein domains in cryo-ET density maps. DomainSeeker partitions AlphaFold2-predicted structures into domains using clique analysis based on predicted aligned errors, then fits these domains into target densities segmented from input cryo-ET maps. Each domain–density fit is evaluated globally and locally to derive prior probabilities, which are subsequently integrated with complementary data, such as cross-linking mass spectrometry (XL-MS), through Bayesian inference to compute posterior probabilities.
 
-This  repository provides two implementations of DomainSeeker. The first is a plugin for ChimeraX (**DomainSeeker_plugin**), offering an interactive graphical interface. The second is a command-line interface (**DomainSeeker_CLI**), delivered as a set of Python scripts that expose all features.
+This repository provides a plugin for ChimeraX (**DomainSeeker_plugin**), offering an interactive graphical interface. The plugin's underlying scripts can also be invoked directly from the command line (see [Command Line Usage](#command-line-usage)). As of version 1.1, the standalone **DomainSeeker_CLI** is removed — use the plugin scripts instead.
 
 # DomainSeeker_plugin
 
@@ -59,11 +59,11 @@ Installation time depends on how long it takes to download the dependencies.
 
 The DomainSeeker plugin can be launched via the menu bar by selecting  **"Tools" → "Structure Analysis" → "DomainSeeker"** .
 
-<img src="/images/launching.png" width="800px">
+<img src="images/launching.png" width="800px">
 
 We show the interface of DomainSeeker here:
 
-<img src="/images/interface.png" width="650px">
+<img src="images/interface.png" width="650px">
 
 ## Workflow
 
@@ -74,25 +74,25 @@ We provide 2 neighboring densities, 10 candidate proteins (including the correct
 
 The DomainSeeker plugin can be launched via the menu bar by selecting  **"Tools" → "Structure Analysis" → "DomainSeeker"** .
 
-<img src="/images/launching.png" width="800px">
+<img src="images/launching.png" width="800px">
 
 We show the interface of DomainSeeker here:
 
-<img src="/images/interface.png" width="650px">
+<img src="images/interface.png" width="650px">
 
 ### Fetch pdb and pae files from AFDB
 
 First of all, select the project directory in the "Global options" module of the plugin.
 
-<img src="/images/project_directory.png" width="600px">
+<img src="images/project_directory.png" width="600px">
 
 If you already have predicted structure files (.pdb) and PAE files (.json), place them into two separate folders and name them using the format "UniprotId.pdb" and "UniprotId.json". Then, select the corresponding folders in the "Global Options" module.
 
-<img src="/images/pdb_pae_directory.png" width="600px">
+<img src="images/pdb_pae_directory.png" width="600px">
 
 Alternatively, in the "Fetch pdb and pae files from AFDB" module, you can select a text file containing the UniProt IDs of all candidate proteins (with one UniProt ID per line) and click the "Fetch Files" button. DomainSeeker will then automatically download the corresponding PDB and PAE files, saving them in the folders specified by "Pdb Directory" and "Pae Directory" in the "Global Options" module.
 
-<img src="/images/fetch_pdb_pae.png" width="600px">
+<img src="images/fetch_pdb_pae.png" width="600px">
 
 ### Parse proteins into domains based on PAE
 
@@ -100,7 +100,7 @@ After obtaining the PDB and PAE files, click the "Parse Domains" button to perfo
 
 When running with the data in the Example folder, setting n_processto 10 allows this step to complete in approximately 8 seconds.
 
-<img src="/images/domain_parsing.png" width="600px">
+<img src="images/domain_parsing.png" width="600px">
 
 > **plddt_cutoff**: Residues with a pLDDT value above this threshold are included as nodes in the residue graph. Residues falling below the threshold are considered to have low prediction confidence and are excluded.  
 > **pae_cutoff**: An edge is established between two residues if their average PAE exceeds this value.  
@@ -121,17 +121,17 @@ The output files will be saved in the folder specified by the "Domain Directory"
 
 For domain-density fitting, the EM density map must first be segmented (manually or automatically) into regions of interest, each saved as a separate .mrc file. Provide the path to the directory containing these files in the global option-"Map directory".
 
-<img src="/images/map_directory.png" width="600px">
+<img src="images/map_directory.png" width="600px">
 
 The image below shows two example regions used in this document:  
 
-<img src="/images/map_example.png" width="600px">
+<img src="images/map_example.png" width="600px">
 
 After specifying both the "Map directory" and "Domain directory" and assigning appropriate values to the parameters, click the "Fit_score" button to perform domain-density fitting.  
 
 When running with the data in the Example folder, setting n_processto 10 allows this step to complete in approximately 80 seconds.  
 
-<img src="/images/fit_score.png" width="600px">  
+<img src="images/fit_score.png" width="600px">  
 
 > **threshold**: Electron density map threshold value.  
 > **resolution**: Resolution of the electron density map, used to generate simulated densities for individual domains.  
@@ -141,7 +141,7 @@ When running with the data in the Example folder, setting n_processto 10 allows 
 
 After fitting, the file structure in the specified output folder ("Fitout Directory") is organized as shown in the image below. Within the results folder, each first-level subdirectory corresponds to one density map (e.g., "A.mrc" and "B.mrc" in the image) and contains the fitting results of all domains placed into that density.  
 
-<img src="/images/fitout_results.png" width="600px">  
+<img src="images/fitout_results.png" width="600px">  
 
 Each density-specific subdirectory includes the following:  
 
@@ -154,7 +154,7 @@ Each density-specific subdirectory includes the following:
 
 The following image displays the user interface and configurable parameters of the prior calculation module.  
 
-<img src="/images/prior_calculation.png" width="600px">  
+<img src="images/prior_calculation.png" width="600px">  
 
 > **box_num**: When calculating z-scores, data points are partitioned into a grid of box_num² cells based on their overlap volume and correlation values.  
 > **relative_density_cutoff**: Relative density is defined as the ratio of the number of data points in a grid cell to the average number of data points across all cells. Only cells with a relative density above this threshold are used when calculating the average curve, to minimize the influence of anomalies.  
@@ -163,7 +163,7 @@ The following image displays the user interface and configurable parameters of t
 
 The output files generated from the prior calculation are shown in the image below:  
 
-<img src="/images/prior_output.png" width="300px">  
+<img src="images/prior_output.png" width="300px">  
 
 > **prior_config.txt**: Contains the parameters used in the prior calculation.  
 > **fitting_probabilities.npy**: Stores the overall probability scores evaluating all fitting positions for every domain.  
@@ -172,11 +172,11 @@ The output files generated from the prior calculation are shown in the image bel
 
 The figures below illustrate the schematic diagrams of "local_assessing.png" and "local_assessing_relative_density.png". They display the distribution of data points, the mean and standard deviation curves, and the grid cells used for calculating these statistics. Users can examine these plots to evaluate whether the estimated mean and standard deviation curves are reasonable, and adjust parameters for recalibration if necessary.  
 
-<img src="/images/local_assessing.png" width="800px">  
+<img src="images/local_assessing.png" width="800px">  
 
 The figure below illustrates how to visualize the results of the prior calculation.  
 
-<img src="/images/prior_visualization.png" width="800px">  
+<img src="images/prior_visualization.png" width="800px">  
 
 1. At the top of the plugin interface, there are two tabs: "Computation"​ and "Presentation". Click on the  "Presentation"​ tab to access the results interface.  
 2. In the "Presentation"​ tab, click "Initialize results"​ to load the results interface and import the prior calculation output. Then, each row in the table corresponds to a density map, displaying the prior probability (pri_prob) and ranking (pri_rank) of every fitted position for each domain. In addition to the numerical output, DomainSeeker automatically renders all density maps and their corresponding fitted domains in the main ChimeraX window for visual inspection.  
@@ -190,7 +190,7 @@ To compute the posterior, the extracted density must preserve its relative posit
 
 The figure below shows the interface and parameters of the posterior calculation module. The posterior calculation component is designed to incorporate data from multiple experimental sources, with cross-linking mass spectrometry (XL-MS) data integration currently implemented.
 
-<img src="/images/posterior_calculation.png" width="600px">
+<img src="images/posterior_calculation.png" width="600px">
 
 > **threshold**：The threshold value of the density map, used to determine whether two densities are adjacent.  
 > **acceptor_cutoff** & **donor_cutoff**：These dual thresholds control which states participate in posterior calculations to reduce computational cost while preserving accuracy. States with prior probabilities exceeding the donor_cutoff may influence other densities, while those above the acceptor_cutoff may be influenced by external evidence. Only states meeting either threshold are included in the calculation.  
@@ -202,11 +202,11 @@ After completing all previous steps, select the file containing the crosslinking
 
 The figure below shows the output files generated by the posterior calculation. The *posterior_config.txt* file in the project directory records the parameters used in the posterior calculation. Within the output folder for each density map, the *posterior_probabilities.txt* file contains all fitting results ranked by their posterior probability.
 
-<img src="/images/posterior_output.png" width="600px">
+<img src="images/posterior_output.png" width="600px">
 
 The figure below illustrates how to visualize the results of the posterior calculation. After loading the prior results in the Presentation​ tab, click "Get posterior results"​ to import and display the posterior outcomes. The posterior probability and ranking for each density map are shown in the corresponding entries. Users can update the displayed results based on the posterior rankings. DomainSeeker will also map the experimental evidence consistent with the selected state onto the structure (shown as red dashed lines representing crosslinks that agree with the structure in the figure).
 
-<img src="/images/posterior_visualization.png" width="800px">    
+<img src="images/posterior_visualization.png" width="800px">    
 
 The results show that after integrating the XL-MS data, the correct proteins are ranked first in both cases with high confidence. Furthermore, visual inspection confirms that both domains fit well into their respective density maps and are consistent with the additional experimental evidence, significantly increasing our confidence in the results.
 
@@ -214,7 +214,7 @@ The results show that after integrating the XL-MS data, the correct proteins are
 
 DomainSeeker allows users to provide custom symmetry transformations. Users specify the symmetry operations that map the initial unit cell to adjacent positions in a JSON file. Since biological macromolecular assemblies typically involve only rotational and translational symmetry, users only need to provide, for each relevant symmetry operation, the symmetry axis, a reference point, the rotation angle and translation vector, together with the list of affected density regions. DomainSeeker then automatically generates symmetry-related copies and extends the scope of cross-link data accordingly.
 
-<img src="/images/symmetry_transform.png" width="600px">
+<img src="images/symmetry_transform.png" width="600px">
 
 As shown in the figure above, the JSON file on the right configures a transformation that shifts density B downward by -60 Å along the z-axis. This transformation does not involve rotation, so the rotation configuration items remain at their default values (empty list or 0—these fields must be filled). Similarly, if a transformation does not involve translation, simply set the `translation` field to its default value (empty list—this field must also be filled).
 
@@ -222,11 +222,11 @@ To test the effectiveness of symmetry transformations, we provide a `crosslinks_
 
 Let us modify the posterior calculation input and recompute:
 
-<img src="/images/symmetry_test.png" width="600px">
+<img src="images/symmetry_test.png" width="600px">
 
 After the calculation completes, click the "Get posterior results" button again in the Presentation tab. The results are shown below:
 
-<img src="/images/symmetry_results.png" width="800px">
+<img src="images/symmetry_results.png" width="800px">
 
 We can see that the cross-link between density A and the symmetry counterpart of density B elevates the correct assignment of density B to the first rank in the posterior results.
 
@@ -236,12 +236,13 @@ We can see that the cross-link between density A and the symmetry counterpart of
 ## Debug    
 If there is no response after clicking the calculation button, please check the following:    
 1. The program may be running in the background. Check the project folder to confirm whether the process is active.    
-2. If there are no changes in the project folder, check the *error.log* file for any error messages.    
-3. If no errors are recorded in *error.log*, verify the path to the ChimeraX executable and ensure that there are no spaces in any of the project paths. If spaces are present, remove them (note that you may need to adjust related settings, such as environment variables, after removing spaces) and try again.    
-4. If the issue persists after the above steps, please report it on GitHub.  
+2. Open ChimeraX's **Log** panel (select **"Tools" → "General" → "Log"**) to view detailed messages. Info and warning messages appear in the Log panel, error messages are highlighted in red, and progress bars are displayed in the status bar.    
+3. If the issue persists after the above steps, please report it on GitHub.  
 
 
-# DomainSeeker_CLI
+# Command Line Usage
+
+The scripts in `DomainSeeker_plugin/src/` can be invoked directly from the terminal, no separate CLI package needed.
 
 ## Installation
 
@@ -249,11 +250,9 @@ If there is no response after clicking the calculation button, please check the 
 
 Install UCSF ChimeraX ≥1.6  [(https://www.cgl.ucsf.edu/chimerax/)](https://www.cgl.ucsf.edu/chimerax/).
 
-The recommanded version is 1.10.
+Note: **Add ChimeraX to your system's PATH environment variable**.
 
-Note:**Add ChimeraX to your system's PATH environment variable**.
-
-#### Install Python dependencies
+### Install Python dependencies
 
 1. Python ≥3.9
 2. mdanalysis
@@ -262,49 +261,65 @@ Note:**Add ChimeraX to your system's PATH environment variable**.
 
 ## Workflow
 
-### Fetch pdb and pae files from AFDB
+### Fetch PDB and PAE files from AFDB
 
 ```
-fetch_pdb_pae.py protein_list pdb_dir pae_dir
+python fetch_pdb_pae.py protein_list.txt output_dir [pdb_dir] [pae_dir]
+```
+
+- `protein_list.txt` — a text file with one UniProt ID per line
+- `output_dir` — parent directory for downloaded files
+- `pdb_dir`, `pae_dir` — optional; if omitted, files are saved in `output_dir/pdb_files/` and `output_dir/pae_files/`
+
+To download only PAE files (skip PDB):
+
+```
+python fetch_pdb_pae.py protein_list.txt output_dir --pae-only [pae_dir]
 ```
 
 ### Parse proteins into domains based on PAE
 
 ```
-parse_with_pae.py pdb_dir pae_dir domain_dir n_process [plddt_cutoff] [pae_cutoff] [clique_cutoff] [min_edge_ratio] [min_common_nodes_ratio] [min_domain_size]
+python parse_with_pae.py pdb_dir pae_dir domain_dir n_process [plddt_cutoff] [pae_cutoff] [clique_cutoff] [min_edge_ratio] [min_common_nodes_ratio] [min_domain_size] [max_domain_size]
 ```
+
+Optional parameters default to: plddt_cutoff=70, pae_cutoff=5, clique_cutoff=4, min_edge_ratio=0.6, min_common_nodes_ratio=0.5, min_domain_size=40, max_domain_size=1000.
 
 ### Fit domains into densities and score fitted domains
 
 ```
-fit_with_chimerax.py domain_dir map_dir fitout_dir map_level resolution n_search negtive_laplacian_cutoff positive_laplacian_cutoff   n_process
+python fit_with_chimerax.py domain_dir map_dir fitout_dir threshold resolution n_search negtive_laplacian_cutoff positive_laplacian_cutoff n_process
 ```
+
+`threshold` and `resolution` can each be either a single float (applied to all densities) or a JSON file path mapping density names (without `.mrc` extension) to per-density values.
 
 ### Calculate prior probability of each fitted domain
 
 ```
-calculate_prior_probabilities.py map_dir fitout_dir box_num min_data_per_box relative_density_cutoff zScore_offset
+python calculate_prior_probabilities.py map_dir fitout_dir box_num min_data_per_box relative_density_cutoff zScore_offset
 ```
 
-### Integrate extra experimental data
+### Integrate experimental data (posterior)
 
 ```
-calculate_posterior_probabilities.py domain_dir map_dir map_level fitout_dir acceptor_cutoff donor_cutoff evidence_strength crosslink_file1 crosslink_file2 ...
+python calculate_posterior_probabilities.py project_dir domain_dir map_dir map_level fitout_dir acceptor_cutoff donor_cutoff evidence_strength symmetry_transform_file crosslink_file1 [crosslink_file2 ...]
 ```
 
+- `map_level` — the threshold value of the density maps, used to determine adjacency
+- `symmetry_transform_file` — path to a JSON file defining symmetry transformations (pass `"None"` if not needed)
+- `crosslink_file1 ...` — one or more crosslink data files
 
-### Visualize results
+### Visualize fitted domains (optional)
 
-
-We provide an extra script to generate the fitted domains according to the fit log files.
-
+To generate PDB files of fitted domains for visual inspection:
 
 ```
-get_fitted_domains.py domain_dir fitout_subdir domain1 domain2 ...
+python get_fitted_domains.py domain_dir fitout_subdir domain1 [domain2 ...]
 ```
 
-
-Here, *fitout_subdir* is the subdirectory (e.g., "A.mrc") of the *fitout_dir*. The script will generate pdb files of specified fitted domains in the "fitted_domains" folder under the *fitout_subdir*.
+- `fitout_subdir` — a density subdirectory inside fitout_dir (e.g., `A.mrc`)
+- `domain1 ...` — domain names without suffix (e.g., `Q6X6Z7_D0`)
+- Output PDB files are saved in `fitout_subdir/fitted_domains/`
 
 
 # Citation

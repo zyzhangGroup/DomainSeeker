@@ -1,7 +1,3 @@
-# 全局异常处理
-# import domainseeker_errorLog
-#----------------------------------------------------------------------------------------------------
-
 import numpy as np
 import MDAnalysis as mda
 import os,sys
@@ -17,21 +13,21 @@ import warnings
 import json
 
 
-project_dir=sys.argv[2]
-origin_domain_dir=sys.argv[3]
-map_dir=sys.argv[4]
+project_dir=sys.argv[1]
+origin_domain_dir=sys.argv[2]
+map_dir=sys.argv[3]
 # map threshold
-map_levels=sys.argv[5]
-fitout_dir=sys.argv[6]
+map_levels=sys.argv[4]
+fitout_dir=sys.argv[5]
 
-acceptor_prior_probability_cutoff=float(sys.argv[7])
-donor_prior_probability_cutoff=float(sys.argv[8])
-evidence_strength=float(sys.argv[9])
+acceptor_prior_probability_cutoff=float(sys.argv[6])
+donor_prior_probability_cutoff=float(sys.argv[7])
+evidence_strength=float(sys.argv[8])
 
 # 对称性配置文件
-symmetry_transform_file=sys.argv[10]
+symmetry_transform_file=sys.argv[9]
 # 交联质谱文件
-crosslink_files = sys.argv[11:]
+crosslink_files = sys.argv[10:]
 
 
 def read_prior_probabilities(file_path):
@@ -804,7 +800,7 @@ for group_id, group in enumerate(density_groups):
     # itertools.product计算若干列表的直积
     group_state_class_digital=0
     crosslink_compliant_states_of_densities_of_group=[crosslink_compliant_states_of_densities[density_id] for density_id in group]
-    for group_state_class in tqdm(itertools.product(*crosslink_compliant_states_of_densities_of_group),total=number_of_group_classes,desc=f"Grouping",file=sys.stdout):
+    for group_state_class in tqdm(itertools.product(*crosslink_compliant_states_of_densities_of_group),total=number_of_group_classes,desc="[STATUS]Grouping",file=sys.stdout):
         group_state_classes_info[group_id].append(get_group_state_class_info(group_state_class,group_id,group_state_class_digital))
         group_state_class_digital+=1
 
@@ -933,13 +929,13 @@ sorted_posterior_state_ids_of_densities=[0 for density_id in range(n_densities)]
 sorted_posterior_probabilities_of_densities=[0 for density_id in range(n_densities)]
 
 # 处理grouped_densities
-print("Processing grouped_densities :")
+print("Processing grouped_densities :", flush=True)
 for super_group_id in range(len(super_groups)):
-    print("Super group", super_group_id)
+    print("Super group", super_group_id, flush=True)
     for group_id_in_super_group, group_id in enumerate(super_groups[super_group_id]):
-        print("\t","Group", group_id)
+        print("\t","Group", group_id, flush=True)
         for density_id_in_group, density_id in enumerate(density_groups[group_id]):
-            print("\t\t","Density", density_id,density_names[density_id])
+            print("\t\t","Density", density_id,density_names[density_id], flush=True)
             # 预处理
             posterior_state_ids=np.arange(1, len(states_of_densities[density_id])+1)
             posterior_probabilities=np.array(prior_probabilities_of_densities[density_id])
@@ -962,10 +958,10 @@ for super_group_id in range(len(super_groups)):
             save_path=os.path.join(fitout_dir,density_names[density_id]+".mrc","posterior_probabilities.txt")
             save_posterior_results_of_density(save_path,density_id,sorted_posterior_state_ids,sorted_posterior_probabilities)
 
-print()
+print("-" * 40, flush=True)
 
 # 处理ungrouped_densities
-print("Processing ungrouped_densities :")
+print("Processing ungrouped_densities :", flush=True)
 for density_id in set(range(n_densities))-grouped_densities:
     print("Density", density_id,density_names[density_id],flush=True)
     # 预处理
@@ -978,4 +974,5 @@ for density_id in set(range(n_densities))-grouped_densities:
     save_path=os.path.join(fitout_dir,density_names[density_id]+".mrc","posterior_probabilities.txt")
     save_posterior_results_of_density(save_path,density_id,sorted_posterior_state_ids,sorted_posterior_probabilities)
 
-print("Done calculating posterior probabilities.")
+print("Done calculating posterior probabilities.", flush=True)
+print("=" * 40, flush=True)

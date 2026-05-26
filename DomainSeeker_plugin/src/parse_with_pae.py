@@ -1,7 +1,3 @@
-# 全局异常处理
-import domainseeker_errorLog
-#----------------------------------------------------------------------------------------------------
-
 import numpy as np
 import networkx as nx
 import MDAnalysis as mda
@@ -10,20 +6,20 @@ import multiprocessing
 from tqdm import tqdm
 import warnings
 
-pdb_dir=sys.argv[2]
-pae_dir=sys.argv[3]
-output_dir=sys.argv[4]
-n_processors=int(sys.argv[5])
+pdb_dir=sys.argv[1]
+pae_dir=sys.argv[2]
+output_dir=sys.argv[3]
+n_processors=int(sys.argv[4])
 
 #parameters
-if len(sys.argv)>6:
-    plddt_cutoff=float(sys.argv[6])
-    pae_cutoff=float(sys.argv[7])
-    clique_cutoff=int(sys.argv[8])
-    min_dege_ratio_between_cliques=float(sys.argv[9])
-    min_common_nodes_ratio_between_cliques=float(sys.argv[10])
-    minimum_domain_length=int(sys.argv[11])
-    maximum_domain_length=int(sys.argv[12])
+if len(sys.argv)>5:
+    plddt_cutoff=float(sys.argv[5])
+    pae_cutoff=float(sys.argv[6])
+    clique_cutoff=int(sys.argv[7])
+    min_dege_ratio_between_cliques=float(sys.argv[8])
+    min_common_nodes_ratio_between_cliques=float(sys.argv[9])
+    minimum_domain_length=int(sys.argv[10])
+    maximum_domain_length=int(sys.argv[11])
 else:
     plddt_cutoff=70 
     pae_cutoff=5
@@ -108,8 +104,10 @@ def get_residue_graph(u,pae_matrix,plddt_cutoff,pae_cutoff):
     #constract the graph
     residue_graph=nx.from_numpy_array(adjacent_matrix)
     residue_graph=nx.relabel_nodes(residue_graph,{i:i+1 for i in range(len(adjacent_matrix))})
-    # remove residues with low plddts
-    residue_graph.remove_nodes_from(u.select_atoms(f'tempfactor 0:{plddt_cutoff}').residues.resids)
+    # remove residues with low plddts (use CA atom pLDDT, PAE-matrix-index-based)
+    low_conf_ca=u.select_atoms(f"name CA and tempfactor 0:{plddt_cutoff}")
+    removed_nodes=low_conf_ca.resindices+1
+    residue_graph.remove_nodes_from(removed_nodes)
     return residue_graph
 
 
@@ -208,8 +206,9 @@ if __name__ == '__main__':
 
     with multiprocessing.Pool(n_processors) as pool:
         # 强制迭代tqdm对象，更新进度条
-        for result in tqdm(pool.imap_unordered(run, file_list),total=len(file_list),desc="Parsing",file=sys.stdout):
+        for result in tqdm(pool.imap_unordered(run, file_list),total=len(file_list),desc="[STATUS]Parsing",file=sys.stdout):
             # 处理结果
             pass
     
-    print("Done domain parsing.")
+    print("Done domain parsing.", flush=True)
+    print("=" * 40, flush=True)

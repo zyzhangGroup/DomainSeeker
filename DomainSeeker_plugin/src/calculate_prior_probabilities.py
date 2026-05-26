@@ -1,7 +1,3 @@
-# 全局异常处理
-import domainseeker_errorLog
-#----------------------------------------------------------------------------------------------------
-
 import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,12 +6,12 @@ import math
 from scipy.interpolate import interp1d
 from tqdm import tqdm
 
-map_dir = sys.argv[2]
-fitout_dir = sys.argv[3]
-box_num = int(sys.argv[4])
-min_entries_per_box = int(sys.argv[5])
-relative_density_cutoff = float(sys.argv[6])
-z_score_offset = float(sys.argv[7])
+map_dir = sys.argv[1]
+fitout_dir = sys.argv[2]
+box_num = int(sys.argv[3])
+min_entries_per_box = int(sys.argv[4])
+relative_density_cutoff = float(sys.argv[5])
+z_score_offset = float(sys.argv[6])
 
 grids_x=box_num
 grids_y=box_num
@@ -71,13 +67,12 @@ def save_relative_grids_density_plot(grids,number_of_data, density_filename):
             relative_density=len(grids[i][j])*grids_x*grids_y/number_of_data
             relative_densitys[i][j]=relative_density
     relative_densitys=np.array(relative_densitys)
-    plt.figure(figsize=(10,10))
-    plt.matshow(relative_densitys.T[::-1], cmap=cmap)
-    plt.colorbar()
+    fig, ax = plt.subplots(figsize=(10,10))
+    img = ax.matshow(relative_densitys.T[::-1], cmap=cmap)
+    fig.colorbar(img, ax=ax)
     save_path=os.path.join(fitout_dir, density_filename, "local_assessing_relative_density.png")
     plt.savefig(save_path)
-    # 关闭图像
-    plt.close()
+    plt.close(fig)
 
 def merge_grids_to_box(grids):
      box=[]
@@ -179,14 +174,16 @@ def zScore_to_probability(z, offset):
 
 def get_prior_probabilities(fitting_probabilities, zScores, offset):
     # 提取键并预分配数组以提高效率
-    states=np.array([row[0] for row in zScores])
+    states=np.array([row[0] for row in zScores if '_'.join(row[0].split('_')[:-1]) in fitting_probabilities.keys()])
     factor_array = np.empty(len(states))
     
     # 计算因子值
     for i, name in enumerate(states):
-        proteinId, domainId, fitId = name.split('_')
+        # proteinId, domainId, fitId = name.split('_')
+        fitId = name.split('_')[-1]
+        domain = '_'.join(name.split('_')[:-1])
         z = float(zScores[i][-1])
-        factor_array[i] = zScore_to_probability(z, offset) * fitting_probabilities[proteinId + "_" + domainId][int(fitId)]
+        factor_array[i] = zScore_to_probability(z, offset) * fitting_probabilities[domain][int(fitId)]
     
     # 计算总和和排序索引
     partition_function = np.sum(factor_array)
@@ -218,7 +215,7 @@ for i, density_filename in enumerate(density_filenames):
     fitting_probabilities_path=os.path.join(fitout_subdir,"fitting_probabilities.npy")
     fitting_probabilities={}
     # 立即输出，无缓冲
-    status_desc = f"{i+1}/{len(density_filenames)}--Calculating fitting probabilities"
+    status_desc = f"[STATUS]{i+1}/{len(density_filenames)}--Calculating fitting probabilities"
     fit_logs = os.listdir(fitlog_subdir)
     for file_name in tqdm(fit_logs,total = len(fit_logs), desc=status_desc, file=sys.stdout):
         if file_name.endswith(".log"):
@@ -230,7 +227,7 @@ for i, density_filename in enumerate(density_filenames):
 
     
     # 计算z-scores
-    status_desc = f"{i+1}/{len(density_filenames)}--Calculating z-scores"
+    status_desc = f"[STATUS]{i+1}/{len(density_filenames)}--Calculating z-scores"
     # 读取scores
     scores_path = os.path.join(fitout_subdir, "overlap_scores.npy")
     if os.path.exists(scores_path):
@@ -244,15 +241,16 @@ for i, density_filename in enumerate(density_filenames):
         # 计算z-scores
         zScores=get_zScores(scores, density_filename, status_desc)
     else:
-        print(f"No scores found for {density_filename}",file=sys.stderr)
+        print(f"[WARN]No scores found for {density_filename}",file=sys.stderr)
 
     # 计算prior_probabilities
-    print(f"{i+1}/{len(density_filenames)}--Calculating prior probabilities", flush=True)
+    print(f"[STATUS]{i+1}/{len(density_filenames)}--Calculating prior probabilities", flush=True)
     prior_probabilities = get_prior_probabilities(fitting_probabilities, zScores, z_score_offset)
     prior_probabilities_path = os.path.join(fitout_subdir, "prior_probabilities.txt")
     np.savetxt(prior_probabilities_path, prior_probabilities,fmt='%s')
 
 print("Done calculating prior probabilities.", flush=True)
+print("=" * 40, flush=True)
 
 
     

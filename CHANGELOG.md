@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-05-24
+Adapt to AF3 per-atom pLDDT: use CA atom pLDDT and `resindices` for
+cross-chain safe residue filtering in domain parsing.
+
+## [1.1.1] - 2026-05-22
+
+Reduce memory usage of result presentation.
+Add `--pae-only` option to fetch script for downloading PAE files separately.
+
 ## [1.1.0] - 2026-05-14
 Add symmetry transformation. Users can specify custom rotation/translation
 operations via JSON files; DomainSeeker generates symmetry-related density

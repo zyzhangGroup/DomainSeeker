@@ -1,6 +1,6 @@
 import MDAnalysis as mda
 import numpy as np
-import sys,os
+import sys,os,warnings
 
 argv=sys.argv
 domain_dir=argv[1]
@@ -21,13 +21,17 @@ def transform_positions(original_xyzs,transformation_matrix):
 def transform_save_single_fit(u,original_xyzs,transformation_matrix,save_path):
     transformed_xyzs=transform_positions(original_xyzs,transformation_matrix)
     u.atoms.positions=transformed_xyzs
-    u.atoms.write(save_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        u.atoms.write(save_path)
 
 os.makedirs(os.path.join(fitout_subdir,"fitted_domains"),exist_ok=True)
 
 for domain in domain_list:
     domain_path=os.path.join(domain_dir,domain+'.pdb')
-    u=mda.Universe(domain_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        u=mda.Universe(domain_path)
     original_xyzs=u.atoms.positions
 
     log_path=os.path.join(fitout_subdir,"fitlogs",domain+'.log')

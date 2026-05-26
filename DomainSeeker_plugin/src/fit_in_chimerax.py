@@ -29,7 +29,5 @@ if len(log_data) >=1:
     fitlog_subdir=os.path.join(output_subdir,"fitlogs")
     os.makedirs(fitlog_subdir,exist_ok=True)
     log_path=os.path.join(fitlog_subdir,os.path.basename(domain_path).replace('pdb','log'))
-    print(f"{output_subdir=}")
-    print(f"{log_path=}")
     np.savetxt(log_path,log_data,fmt="%s")
 

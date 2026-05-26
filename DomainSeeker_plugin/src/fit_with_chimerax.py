@@ -1,9 +1,6 @@
-# 全局异常处理
-import domainseeker_errorLog
-#----------------------------------------------------------------------------------------------------
-
 import os,sys
 import subprocess,multiprocessing
+import shutil
 import MDAnalysis as mda
 import numpy as np
 import scipy
@@ -14,19 +11,25 @@ import json
 
 script_dir=os.path.dirname(os.path.realpath(__file__)).replace("\\","/")
 
-python_exec=sys.executable
-chimerax_dir = os.path.dirname(python_exec)
+# 检测运行环境：若 sys.executable 以 ChimeraX 开头，则为 ChimeraX 环境
+_in_chimerax_env = os.path.basename(sys.executable).startswith("ChimeraX")
 
-# 不同系统的ChimeraX
-# windows
-if sys.platform in ["win32","win64"]:
-    ChimeraX=os.path.join(chimerax_dir,"ChimeraX-console.exe")
-# mac
-elif sys.platform=="darwin":
-    ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
-# linux
+if _in_chimerax_env:
+    # ChimeraX 环境：ChimeraX 与 sys.executable 同目录
+    _chimerax_dir = os.path.dirname(sys.executable)
+    if sys.platform in ["win32","win64"]:
+        ChimeraX = os.path.join(_chimerax_dir, "ChimeraX-console.exe")
+    else:
+        ChimeraX = os.path.join(_chimerax_dir, "ChimeraX")
 else:
-    ChimeraX = os.path.join(chimerax_dir,"ChimeraX")
+    # CLI 环境：通过 PATH 查找
+    if sys.platform in ["win32","win64"]:
+        _exe_name = "ChimeraX-console.exe"
+    else:
+        _exe_name = "ChimeraX"
+    ChimeraX = shutil.which(_exe_name)
+    if ChimeraX is None:
+        raise FileNotFoundError("Cannot find ChimeraX executable. Install ChimeraX and add it to PATH.")
 
 def fit(params):
     domain_filename, ref_map_filename, ref_map_threshold, resolution = params
@@ -36,23 +39,23 @@ def fit(params):
     cmd_list = [ChimeraX, "--nogui", "--script", f"'{script_dir}/fit_in_chimerax.py' '{domain_path}' '{map_path}' '{output_subdir}' {ref_map_threshold} {resolution} {n_search}", "--exit"]
     # 舍弃输出
     subprocess.run(cmd_list,shell=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-    
+
 # 全局变量
-domain_dir=os.path.realpath(sys.argv[2]).replace("\\","/")
-map_dir=os.path.realpath(sys.argv[3]).replace("\\","/")
-fitout_dir=os.path.realpath(sys.argv[4]).replace("\\","/")
+domain_dir=os.path.realpath(sys.argv[1]).replace("\\","/")
+map_dir=os.path.realpath(sys.argv[2]).replace("\\","/")
+fitout_dir=os.path.realpath(sys.argv[3]).replace("\\","/")
 
-ref_map_thresholds=sys.argv[5]
-resolutions=sys.argv[6]
+ref_map_thresholds=sys.argv[4]
+resolutions=sys.argv[5]
 
-n_search=int(sys.argv[7])
+n_search=int(sys.argv[6])
 
-negtive_laplacian_cutoff=float(sys.argv[8])
-positive_laplacian_cutoff=float(sys.argv[9])
+negtive_laplacian_cutoff=float(sys.argv[7])
+positive_laplacian_cutoff=float(sys.argv[8])
 fit_map_laplacian_cutoff_low=-2
 fit_map_laplacian_cutoff_high=15
 
-n_process=int(sys.argv[10])
+n_process=int(sys.argv[9])
 
 ## 局部打分
 def get_ref_map_mat_laplacian_and_params(ref_map_path):
@@ -137,7 +140,7 @@ def get_fit_map_mat(u,transformation_matrix,resolution,density_param_dict):
     n_atoms=u.atoms.n_atoms
     # apply the transformation matrix
     transformed_xyzs=transform_positions(xyzs,transformation_matrix)
-    weights=[weight_dict[e] for e in u.atoms.types]
+    weights=u.atoms.masses
     data=np.zeros(grid_shape)
     for i in range(n_atoms):
         xyz=transformed_xyzs[i]
@@ -249,7 +252,7 @@ if __name__=="__main__":
 
         with multiprocessing.Pool(n_process) as pool:
             # 强制迭代tqdm对象，更新进度条
-            for result in tqdm(pool.imap_unordered(fit,params_list),total=len(domain_list),desc=f"{i+1}/{len(map_list)}--Fitting {ref_map_filename}",file=sys.stdout):
+            for result in tqdm(pool.imap_unordered(fit,params_list),total=len(domain_list),desc=f"[STATUS]{i+1}/{len(map_list)}--Fitting {ref_map_filename}",file=sys.stdout):
                 # 处理结果
                 pass
 
@@ -262,7 +265,7 @@ if __name__=="__main__":
         pool_params=[(ref_map_filename,ref_map_mat_laplacian,log,resolution,density_param_dict) for log in log_list]
 
         pool=multiprocessing.Pool(n_process)
-        scores=list(tqdm(pool.imap_unordered(score,pool_params),total=len(log_list),desc=f"{i+1}/{len(map_list)}--Locally scoring {ref_map_filename}",file=sys.stdout)) #1.将结果存入列表。2.list强制迭代tqdm对象，更新进度条
+        scores=list(tqdm(pool.imap_unordered(score,pool_params),total=len(log_list),desc=f"[STATUS]{i+1}/{len(map_list)}--Locally scoring {ref_map_filename}",file=sys.stdout)) #1.将结果存入列表。2.list强制迭代tqdm对象，更新进度条
         pool.close()
         pool.join()
 
@@ -285,7 +288,8 @@ if __name__=="__main__":
         scores_path=os.path.join(fitout_dir,ref_map_filename,"overlap_scores.npy")
         np.save(scores_path,scores_dict,allow_pickle=True)
 
-    print("Done fitting and scoring.")
+    print("Done fitting and scoring.", flush=True)
+    print("=" * 40, flush=True)
 
 
 
