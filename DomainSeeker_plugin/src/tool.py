@@ -296,12 +296,12 @@ class DomainSeeker(ToolInstance):
         body.addWidget(min_data_per_box_text, 1, 1)
 
         relative_density_cutoff_text = QLineEdit()
-        relative_density_cutoff_text.setText("0.01")
+        relative_density_cutoff_text.setText("1")
         body.addWidget(QLabel("relative_density_cutoff"), 0, 2)
         body.addWidget(relative_density_cutoff_text, 1, 2)
 
         zScore_offset_text = QLineEdit()
-        zScore_offset_text.setText("15")
+        zScore_offset_text.setText("30")
         body.addWidget(QLabel("zScore_offset"), 2, 0)
         body.addWidget(zScore_offset_text, 3, 0)
 

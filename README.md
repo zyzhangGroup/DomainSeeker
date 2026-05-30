@@ -82,6 +82,10 @@ Alternatively, in the "Fetch pdb and pae files from AFDB" module, you can select
 
 <img src="images/fetch_pdb_pae.png" width="600px">
 
+### Multimer structure support
+
+DomainSeeker now supports AF3-predicted structures (including **multimers**). AF3-predicted structure files are typically named `fold_xxx_model_x.cif`, with PAE data saved in `fold_xxx_full_data_x.json`. Place these files into the pdb_files and pae_files folders respectively (renaming is optional, but recommended). The only requirement is that the structure and PAE files share the same base name (excluding extension). All subsequent steps process them identically to AF2 data. During domain parsing, .cif files will be automatically converted to PDB.
+
 ### Parse proteins into domains based on PAE
 
 After obtaining the PDB and PAE files, click the "Parse Domains" button to perform domain partitioning based on the PAE information.  
@@ -242,8 +246,9 @@ Note: **Add ChimeraX to your system's PATH environment variable**.
 
 1. Python ≥3.9
 2. mdanalysis
-3. networkx
-4. wget
+3. gemmi
+4. networkx
+5. wget
 
 ## Workflow
 

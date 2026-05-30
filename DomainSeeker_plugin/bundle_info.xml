@@ -32,6 +32,7 @@ will be displayed without the ChimeraX- prefix.
         <Dependency name="ChimeraX-UI" version=">=1.6"/>
         <Dependency name="mdanalysis"/>
         <Dependency name="networkx"/>
+        <Dependency name="gemmi"/>
         <Dependency name="wget"/>
 
     </Dependencies>
@@ -44,7 +45,6 @@ will be displayed without the ChimeraX- prefix.
     <Classifiers>
         <!-- Development Status should be compatible with bundle version number -->
         <PythonClassifier>Development Status :: 3 - Alpha</PythonClassifier>
-        <PythonClassifier>License :: Freeware</PythonClassifier>
         <!-- ChimeraX classifiers describe supplied functionality -->
         <!-- Register a graphical interface tool -->
         <ChimeraXClassifier>ChimeraX :: Tool :: DomainSeeker :: Structure Analysis :: 

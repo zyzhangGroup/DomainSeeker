@@ -5,6 +5,7 @@ import os,sys
 import multiprocessing
 from tqdm import tqdm
 import warnings
+from cif2pdb import cif2pdb
 
 pdb_dir=sys.argv[1]
 pae_dir=sys.argv[2]
@@ -181,12 +182,18 @@ def save_pdbs(u,clusters,uniprot_id,output_dir):
         info_file.close()
     return 0
 
-def run(pdb_file_name):
-    uniprot_id=pdb_file_name[:-4]
+def run(uniprot_id):
     pae_path=os.path.join(pae_dir,f"{uniprot_id}.json")
     if os.path.exists(pae_path):
-        # get the model
+        # 找 PDB，找不到则尝试 CIF → PDB
         pdb_path=os.path.join(pdb_dir,f"{uniprot_id}.pdb")
+        if not os.path.exists(pdb_path):
+            cif_path=os.path.join(pdb_dir,f"{uniprot_id}.cif")
+            if not os.path.exists(cif_path):
+                print(f"[WARN] {uniprot_id}: PDB 和 CIF 均不存在，跳过")
+                return
+            cif2pdb(cif_path, pdb_path)
+        # get the model
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
             # 抑制读取pdb时的冗余警告
@@ -202,11 +209,11 @@ def run(pdb_file_name):
 # run in parallel
 if __name__ == '__main__':
     os.makedirs(output_dir,exist_ok=True)
-    file_list=[file_name for file_name in os.listdir(pdb_dir) if file_name.endswith(".pdb")]
+    uniprot_id_list=[file_name[:-5] for file_name in os.listdir(pae_dir) if file_name.endswith(".json")]
 
     with multiprocessing.Pool(n_processors) as pool:
         # 强制迭代tqdm对象，更新进度条
-        for result in tqdm(pool.imap_unordered(run, file_list),total=len(file_list),desc="[STATUS]Parsing",file=sys.stdout):
+        for result in tqdm(pool.imap_unordered(run, uniprot_id_list),total=len(uniprot_id_list),desc="[STATUS]Parsing",file=sys.stdout):
             # 处理结果
             pass
     

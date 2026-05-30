@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] 2026-05-30
+Support .cif files as input (auto-detected and converted).
+Formally support AF3 predicted structures (including multimers).
+
 ## [1.1.2] - 2026-05-24
 Adapt to AF3 per-atom pLDDT: use CA atom pLDDT and `resindices` for
 cross-chain safe residue filtering in domain parsing.
