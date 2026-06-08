@@ -68,7 +68,7 @@ We show the interface of DomainSeeker here:
 
 <img src="images/interface.png" width="650px">
 
-### Fetch pdb and pae files from AFDB
+### Fetch PDB and PAE files from AFDB
 
 First of all, select the project directory in the "Global options" module of the plugin.
 
@@ -78,7 +78,7 @@ If you already have predicted structure files (.pdb) and PAE files (.json), plac
 
 <img src="images/pdb_pae_directory.png" width="600px">
 
-Alternatively, in the "Fetch pdb and pae files from AFDB" module, you can select a text file containing the UniProt IDs of all candidate proteins (with one UniProt ID per line) and click the "Fetch Files" button. DomainSeeker will then automatically download the corresponding PDB and PAE files, saving them in the folders specified by "Pdb Directory" and "Pae Directory" in the "Global Options" module.
+Alternatively, in the "Fetch PDB and PAE files from AFDB" module, you can select a text file containing the UniProt IDs of all candidate proteins (with one UniProt ID per line) and click the "Fetch Files" button. DomainSeeker will then automatically download the corresponding PDB and PAE files, saving them in the folders specified by "PDB Directory" and "Pae Directory" in the "Global Options" module.
 
 <img src="images/fetch_pdb_pae.png" width="600px">
 
@@ -94,8 +94,8 @@ When running with the data in the Example folder, setting n_processto 10 allows 
 
 <img src="images/domain_parsing.png" width="600px">
 
-> **plddt_cutoff**: Residues with a pLDDT value above this threshold are included as nodes in the residue graph. Residues falling below the threshold are considered to have low prediction confidence and are excluded.  
-> **pae_cutoff**: An edge is established between two residues if their average PAE exceeds this value.  
+> **pLDDT_cutoff**: Residues with a pLDDT value above this threshold are included as nodes in the residue graph. Residues falling below the threshold are considered to have low prediction confidence and are excluded.  
+> **PAE_cutoff**: An edge is established between two residues if their average PAE exceeds this value.  
 > **clique_cutoff**: Cliques containing at least this number of residues are treated as nodes in the cluster network; those smaller than the threshold are filtered out.  
 > **min_edge_ratio** & **min_common_nodes_ratio**: In the residue network, two cliques are connected in the cluster network if they share at least *min_common_nodes_ratio residues*, or if the edge  between them reaches *min_edge_ratio*. Connected cliques collectively form a domain.  
 > **min_domain_size**: Domains containing fewer than this number of residues are filtered out.  
@@ -148,7 +148,7 @@ The following image displays the user interface and configurable parameters of t
 
 > **box_num**: When calculating z-scores, data points are partitioned into a grid of box_num² cells based on their overlap volume and correlation values.  
 > **relative_density_cutoff**: Relative density is defined as the ratio of the number of data points in a grid cell to the average number of data points across all cells. Only cells with a relative density above this threshold are used when calculating the average curve, to minimize the influence of anomalies.  
-> **min_data_per_box**: After filtering cells by relative density, cells within the same overlap volume range are grouped into *box_num* bins. Each bin must contain at least *min_data_per_box* data points; otherwise, it is merged with an adjacent bin. The mean and standard deviation of the correlation values are computed for each bin to derive an interpolation function across overlap volumes.
+> **min_data_per_box**: After filtering cells by relative density, cells within the same overlap volume range are grouped into *box_num* bins. Each bin must contain at least *min_data_per_box* data points; otherwise, it is merged with an adjacent bin. The mean and standard deviation of the correlation values are computed for each bin to derive an interpolation function across overlap volumes.  
 > **zScore_offset**: The z-score is converted to a probability using a sigmoid function: `Sigmoid(zScore – offset)`.  
 
 The output files generated from the prior calculation are shown in the image below:  
@@ -271,10 +271,10 @@ python fetch_pdb_pae.py protein_list.txt output_dir --pae-only [pae_dir]
 ### Parse proteins into domains based on PAE
 
 ```
-python parse_with_pae.py pdb_dir pae_dir domain_dir n_process [plddt_cutoff] [pae_cutoff] [clique_cutoff] [min_edge_ratio] [min_common_nodes_ratio] [min_domain_size] [max_domain_size]
+python parse_with_pae.py pdb_dir pae_dir domain_dir n_process [pLDDT_cutoff] [pae_cutoff] [clique_cutoff] [min_edge_ratio] [min_common_nodes_ratio] [min_domain_size] [max_domain_size]
 ```
 
-Optional parameters default to: plddt_cutoff=70, pae_cutoff=5, clique_cutoff=4, min_edge_ratio=0.6, min_common_nodes_ratio=0.5, min_domain_size=40, max_domain_size=1000.
+Optional parameters default to: pLDDT_cutoff=70, PAE_cutoff=5, clique_cutoff=4, min_edge_ratio=0.6, min_common_nodes_ratio=0.5, min_domain_size=40, max_domain_size=1000.
 
 ### Fit domains into densities and score fitted domains
 

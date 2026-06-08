@@ -129,12 +129,12 @@ class DomainSeeker(ToolInstance):
                                     self.map_directory_text, self.project_directory_text.text()))
 
         self.pdb_directory_text = QLineEdit()
-        self._add_directory_row(body, 2, "Pdb directory:", self.pdb_directory_text,
+        self._add_directory_row(body, 2, "PDB directory:", self.pdb_directory_text,
                                 callback=lambda: self._select_directory(
                                     self.pdb_directory_text, self.project_directory_text.text()))
 
         self.pae_directory_text = QLineEdit()
-        self._add_directory_row(body, 3, "Pae directory:", self.pae_directory_text,
+        self._add_directory_row(body, 3, "PAE directory:", self.pae_directory_text,
                                 callback=lambda: self._select_directory(
                                     self.pae_directory_text, self.project_directory_text.text()))
 
@@ -153,7 +153,7 @@ class DomainSeeker(ToolInstance):
 
     def _create_file_fetching_section(self):
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Fetch pdb and pae files from AFDB"))
+        layout.addWidget(QLabel("Fetch PDB and PAE files from AFDB"))
         body = QHBoxLayout()
         body.addWidget(QLabel("Fetch proteins in file:"))
 
@@ -185,12 +185,12 @@ class DomainSeeker(ToolInstance):
 
         plddt_cutoff_text = QLineEdit()
         plddt_cutoff_text.setText("70")
-        body.addWidget(QLabel("plddt_cutoff"), 0, 0)
+        body.addWidget(QLabel("pLDDT_cutoff"), 0, 0)
         body.addWidget(plddt_cutoff_text, 1, 0)
 
         pae_cutoff_text = QLineEdit()
         pae_cutoff_text.setText("5")
-        body.addWidget(QLabel("pae_cutoff"), 0, 1)
+        body.addWidget(QLabel("PAE_cutoff"), 0, 1)
         body.addWidget(pae_cutoff_text, 1, 1)
 
         clique_cutoff_text = QLineEdit()
@@ -291,7 +291,7 @@ class DomainSeeker(ToolInstance):
         body.addWidget(box_num_text, 1, 0)
 
         min_data_per_box_text = QLineEdit()
-        min_data_per_box_text.setText("50")
+        min_data_per_box_text.setText("200")
         body.addWidget(QLabel("min_data_per_box"), 0, 1)
         body.addWidget(min_data_per_box_text, 1, 1)
 
