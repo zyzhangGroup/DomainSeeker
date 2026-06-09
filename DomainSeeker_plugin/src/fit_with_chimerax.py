@@ -50,7 +50,7 @@ resolutions=sys.argv[5]
 
 n_search=int(sys.argv[6])
 
-negtive_laplacian_cutoff=float(sys.argv[7])
+negative_laplacian_cutoff=float(sys.argv[7])
 positive_laplacian_cutoff=float(sys.argv[8])
 fit_map_laplacian_cutoff_low=-2
 fit_map_laplacian_cutoff_high=15
@@ -153,8 +153,8 @@ def get_fit_map_mat(u,transformation_matrix,resolution,density_param_dict):
 def get_scores_overlap(u,transformation_matrix,ref_map_mat_laplacian,resolution,density_param_dict):
     fit_map_mat=get_fit_map_mat(u,transformation_matrix,resolution,density_param_dict)
     fit_map_mat_laplacian=scipy.ndimage.convolve(fit_map_mat,laplacian_kernel,mode='constant')
-    sel=(ref_map_mat_laplacian<negtive_laplacian_cutoff)*(fit_map_mat_laplacian<fit_map_laplacian_cutoff_low)
-    sel_ref=(ref_map_mat_laplacian<negtive_laplacian_cutoff)+(ref_map_mat_laplacian>positive_laplacian_cutoff)
+    sel=(ref_map_mat_laplacian<negative_laplacian_cutoff)*(fit_map_mat_laplacian<fit_map_laplacian_cutoff_low)
+    sel_ref=(ref_map_mat_laplacian<negative_laplacian_cutoff)+(ref_map_mat_laplacian>positive_laplacian_cutoff)
     sel_fit=(fit_map_mat_laplacian<fit_map_laplacian_cutoff_low)+(fit_map_mat_laplacian>fit_map_laplacian_cutoff_high)
     sel2=sel_ref*sel_fit
     overlap_volume=np.sum(sel)
@@ -274,7 +274,7 @@ if __name__=="__main__":
         f.write(f"{domain_dir=}\n"
                +f"{ref_map_path=}\n"
                +f"{ref_map_threshold=}\n"
-               +f"{negtive_laplacian_cutoff=}\n"
+               +f"{negative_laplacian_cutoff=}\n"
                +f"{positive_laplacian_cutoff=}\n"
                +f"{resolution=}\n"
                +f"{fit_map_laplacian_cutoff_low=}\n"

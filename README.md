@@ -279,7 +279,7 @@ Optional parameters default to: pLDDT_cutoff=70, PAE_cutoff=5, clique_cutoff=4, 
 ### Fit domains into densities and score fitted domains
 
 ```
-python fit_with_chimerax.py domain_dir map_dir fitout_dir threshold resolution n_search negtive_laplacian_cutoff positive_laplacian_cutoff n_process
+python fit_with_chimerax.py domain_dir map_dir fitout_dir threshold resolution n_search negative_laplacian_cutoff positive_laplacian_cutoff n_process
 ```
 
 `threshold` and `resolution` can each be either a single float (applied to all densities) or a JSON file path mapping density names (without `.mrc` extension) to per-density values.

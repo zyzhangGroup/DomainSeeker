@@ -262,7 +262,7 @@ class DomainSeeker(ToolInstance):
 
         neg_cutoff_text = QLineEdit()
         neg_cutoff_text.setText("-0.001")
-        body.addWidget(QLabel("negtive_laplacian_cutoff"), 2, 0)
+        body.addWidget(QLabel("negative_laplacian_cutoff"), 2, 0)
         body.addWidget(neg_cutoff_text, 3, 0)
 
         pos_cutoff_text = QLineEdit()
@@ -1139,7 +1139,7 @@ class DomainSeeker(ToolInstance):
                     maximum_domain_length]
         self.run_detatched_subprocess(arg_list)
 
-    def _fit_and_score(self, project_directory, densities_dir, threshold, resolution, n_search, negtive_laplacian_cutoff, positive_laplacian_cutoff , n_process, domains_dir = "", fitout_dir = ""):
+    def _fit_and_score(self, project_directory, densities_dir, threshold, resolution, n_search, negative_laplacian_cutoff, positive_laplacian_cutoff , n_process, domains_dir = "", fitout_dir = ""):
         # Check if the project directory is valid, if not, raise an error
         if not project_directory or not os.path.exists(project_directory):
             self.session.logger.error(f"Project directory {project_directory} does not exist")
@@ -1174,7 +1174,7 @@ class DomainSeeker(ToolInstance):
                   threshold,
                   resolution,
                   n_search,
-                  negtive_laplacian_cutoff,
+                  negative_laplacian_cutoff,
                   positive_laplacian_cutoff,
                   n_process]
         self.run_detatched_subprocess(arg_list)
